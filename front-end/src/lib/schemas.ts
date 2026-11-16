@@ -1,0 +1,152 @@
+import { z } from "zod";
+
+import {
+  CONSULTANCY_STATUSES,
+  COURSES,
+  ENQUIRY_STATUSES,
+  MOCK_RANKS,
+  PAYMENT_MODES,
+  PLACEMENT_STATUSES,
+  ROLES,
+  SOURCES,
+} from "@/lib/types";
+
+const mobile = z
+  .string()
+  .trim()
+  .regex(/^[6-9]\d{9}$/, "Enter a 10-digit mobile number");
+
+function rupee(message: string, allowZero = false) {
+  const amount = z.number({ error: message });
+  return allowZero ? amount.nonnegative(message) : amount.positive(message);
+}
+
+export const signInSchema = z.object({
+  email: z.email("Enter the staff email"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z.email("Enter the staff email"),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    password: z.string().min(8, "Use at least 8 characters"),
+    confirm: z.string().min(8, "Confirm the new password"),
+  })
+  .refine((value) => value.password === value.confirm, {
+    path: ["confirm"],
+    message: "Passwords do not match",
+  });
+
+export const enquirySchema = z.object({
+  enquiryDate: z.string().min(1, "Enter the enquiry date"),
+  studentName: z.string().trim().min(2, "Enter the student name"),
+  contact: mobile,
+  email: z.email("Enter a valid email"),
+  groupAdded: z.boolean(),
+  source: z.enum(SOURCES, "Choose a source"),
+  course: z.enum(COURSES, "Choose a course"),
+  status: z.enum(ENQUIRY_STATUSES, "Choose a status"),
+  remarks: z.string().trim().max(500, "Keep remarks within 500 characters"),
+  followUpDate: z.string(),
+  nextActionDate: z.string(),
+  nextAction: z.string().trim().max(160, "Keep the next action within 160 characters"),
+});
+
+export const followUpSchema = enquirySchema.pick({
+  groupAdded: true,
+  remarks: true,
+  followUpDate: true,
+  nextActionDate: true,
+  nextAction: true,
+});
+
+export const joinSchema = z
+  .object({
+    joinedOn: z.string().min(1, "Enter the joining date"),
+    batch: z.string().min(1, "Choose a batch"),
+    agreedFee: rupee("Enter the agreed course fee"),
+    referralBonus: rupee("Referral bonus cannot be negative", true),
+    referrerName: z.string().trim(),
+  })
+  .refine((value) => value.referralBonus === 0 || value.referrerName.length > 1, {
+    path: ["referrerName"],
+    message: "Name the referrer when a bonus is recorded",
+  });
+
+export function ledgerSchema(balance: number, paid: number) {
+  return z
+    .object({
+      kind: z.enum(["payment", "refund"]),
+      amount: rupee("Enter an amount"),
+      date: z.string().min(1, "Enter the date"),
+      mode: z.enum(PAYMENT_MODES, "Choose how it was received"),
+      note: z.string().trim().max(200, "Keep the note within 200 characters"),
+    })
+    .superRefine((value, ctx) => {
+      if (value.kind === "payment" && value.amount > balance) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["amount"],
+          message: "Amount is higher than the balance",
+        });
+      }
+      if (value.kind === "refund" && value.amount > paid) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["amount"],
+          message: "Refund is higher than the amount collected",
+        });
+      }
+    });
+}
+
+export const expenseSchema = z.object({
+  date: z.string().min(1, "Enter the expense date"),
+  purpose: z.string().trim().min(2, "Enter the purpose"),
+  amount: rupee("Enter the amount"),
+  debitedBy: z.string().min(1, "Choose who debited this"),
+});
+
+export const placementSchema = z.object({
+  mockRank: z.enum(MOCK_RANKS, "Choose a mock rank"),
+  company: z.string().trim().max(80),
+  salary: z.string().trim().max(40),
+  status: z.enum(PLACEMENT_STATUSES, "Choose a status"),
+  updatedOn: z.string().min(1, "Enter the update date"),
+  notes: z.string().trim().max(400),
+});
+
+export const consultancySchema = z.object({
+  name: z.string().trim().min(2, "Enter the candidate name"),
+  contact: mobile,
+  email: z.email("Enter a valid email"),
+  progress: z.enum(CONSULTANCY_STATUSES, "Choose the progress"),
+  company: z.string().trim().max(80),
+  salary: z.string().trim().max(40),
+  agreedFee: rupee("Fee cannot be negative", true),
+  addedOn: z.string().min(1, "Enter the date added"),
+  notes: z.string().trim().max(400),
+});
+
+export const staffSchema = z.object({
+  name: z.string().trim().min(2, "Enter the staff name"),
+  email: z.email("Enter a valid email"),
+  role: z.enum(ROLES, "Choose a role"),
+  password: z.string().min(8, "Use at least 8 characters"),
+  active: z.boolean(),
+});
+
+export type SignInInput = z.infer<typeof signInSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type EnquiryInput = z.infer<typeof enquirySchema>;
+export type FollowUpInput = z.infer<typeof followUpSchema>;
+export type JoinInput = z.infer<typeof joinSchema>;
+export type LedgerInput = z.infer<ReturnType<typeof ledgerSchema>>;
+export type ExpenseInput = z.infer<typeof expenseSchema>;
+export type PlacementInput = z.infer<typeof placementSchema>;
+export type ConsultancyInput = z.infer<typeof consultancySchema>;
+export type StaffInput = z.infer<typeof staffSchema>;
