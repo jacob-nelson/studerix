@@ -60,11 +60,14 @@ export function ExpensesScreen() {
           ) : null
         }
       />
-      <PeriodFilter period={period} from={from} to={to} onPeriod={setPeriod} onFrom={setFrom} onTo={setTo} />
       <DataTable
         data={rows}
         columns={columns}
         searchPlaceholder="Search purpose or staff"
+        searchAlign="end"
+        toolbar={
+          <PeriodFilter period={period} from={from} to={to} onPeriod={setPeriod} onFrom={setFrom} onTo={setTo} />
+        }
         initialSorting={[{ id: "date", desc: true }]}
       />
     </div>

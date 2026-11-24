@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 
 import { Field } from "@/components/field";
+import { DateField } from "@/components/forms/date-field";
 import { OptionSelect } from "@/components/forms/option-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,10 +54,28 @@ export function CandidateForm({
         <Input id="salary" placeholder="5.5 LPA" {...form.register("salary")} />
       </Field>
       <Field label="Agreed fee" htmlFor="agreedFee" error={errors.agreedFee?.message}>
-        <Input id="agreedFee" type="number" min={0} {...form.register("agreedFee", { valueAsNumber: true })} />
+        <Input
+          id="agreedFee"
+          type="number"
+          min={0}
+          {...form.register("agreedFee", { valueAsNumber: true })}
+          className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        />
       </Field>
-      <Field label="Date added" htmlFor="addedOn" error={errors.addedOn?.message}>
-        <Input id="addedOn" type="date" {...form.register("addedOn")} />
+      <Field label="Date added" error={errors.addedOn?.message}>
+        <Controller
+          control={form.control}
+          name="addedOn"
+          render={({ field }) => (
+            <DateField
+              id="addedOn"
+              label="Date added"
+              value={field.value}
+              onChange={field.onChange}
+              invalid={!!errors.addedOn}
+            />
+          )}
+        />
       </Field>
       <Field className="grid gap-1.5 sm:col-span-2" label="Notes" htmlFor="notes">
         <Textarea id="notes" rows={4} {...form.register("notes")} />

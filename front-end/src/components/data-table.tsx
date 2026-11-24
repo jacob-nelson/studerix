@@ -24,6 +24,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from "luci
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -57,6 +58,7 @@ export function DataTable<T extends RowData & { id: string }>({
   columns,
   searchPlaceholder = "Search this list",
   toolbar,
+  searchAlign = "start",
   onRowClick,
   initialSorting = [],
   pageSize = 8,
@@ -65,6 +67,7 @@ export function DataTable<T extends RowData & { id: string }>({
   columns: AppColumn<T>[];
   searchPlaceholder?: string;
   toolbar?: ReactNode;
+  searchAlign?: "start" | "end";
   onRowClick?: (row: T) => void;
   initialSorting?: SortingState;
   pageSize?: number;
@@ -105,7 +108,10 @@ export function DataTable<T extends RowData & { id: string }>({
           onChange={(event) => table.setGlobalFilter(event.target.value)}
           placeholder={searchPlaceholder}
           aria-label={searchPlaceholder}
-          className="w-full min-w-48 flex-1 bg-card sm:max-w-sm"
+          className={cn(
+            "min-w-48 bg-card",
+            searchAlign === "end" ? "w-full sm:ml-auto sm:w-64" : "w-full flex-1 sm:max-w-sm",
+          )}
         />
       </div>
       <div className="overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">

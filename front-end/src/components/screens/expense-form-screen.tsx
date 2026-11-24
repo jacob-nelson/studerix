@@ -7,6 +7,7 @@ import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { Field } from "@/components/field";
+import { DateField } from "@/components/forms/date-field";
 import { OptionSelect } from "@/components/forms/option-select";
 import { PageHeader } from "@/components/page-header";
 import { AccessDenied } from "@/components/states";
@@ -57,14 +58,32 @@ export function ExpenseFormScreen() {
               router.push("/expenses");
             })}
           >
-            <Field label="Date" htmlFor="date" error={form.formState.errors.date?.message}>
-              <Input id="date" type="date" {...form.register("date")} />
+            <Field label="Date" error={form.formState.errors.date?.message}>
+              <Controller
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <DateField
+                    id="date"
+                    label="Date"
+                    value={field.value}
+                    onChange={field.onChange}
+                    invalid={!!form.formState.errors.date}
+                  />
+                )}
+              />
             </Field>
             <Field label="Purpose" htmlFor="purpose" error={form.formState.errors.purpose?.message}>
               <Input id="purpose" {...form.register("purpose")} />
             </Field>
             <Field label="Amount" htmlFor="amount" error={form.formState.errors.amount?.message}>
-              <Input id="amount" type="number" min={1} {...form.register("amount", { valueAsNumber: true })} />
+              <Input
+                id="amount"
+                type="number"
+                min={1}
+                {...form.register("amount", { valueAsNumber: true })}
+                className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
             </Field>
             <Field
               label="Debited by"

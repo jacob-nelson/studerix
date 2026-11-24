@@ -1,6 +1,6 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
+import { DateField } from "@/components/forms/date-field";
 import type { Period } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
@@ -48,21 +48,9 @@ export function PeriodFilter({
       </div>
       {period === "custom" ? (
         <div className="flex items-center gap-2">
-          <Input
-            type="date"
-            value={from}
-            onChange={(event) => onFrom(event.target.value)}
-            aria-label="From date"
-            className="w-40 bg-card"
-          />
+          <DateField className="w-40" label="From date" value={from} onChange={onFrom} />
           <span className="text-sm text-muted-foreground">to</span>
-          <Input
-            type="date"
-            value={to}
-            onChange={(event) => onTo(event.target.value)}
-            aria-label="To date"
-            className="w-40 bg-card"
-          />
+          <DateField className="w-40" label="To date" value={to} onChange={onTo} />
         </div>
       ) : null}
     </div>

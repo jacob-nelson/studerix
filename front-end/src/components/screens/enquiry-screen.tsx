@@ -8,6 +8,7 @@ import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { Facts } from "@/components/facts";
+import { DateField } from "@/components/forms/date-field";
 import { EnquiryForm } from "@/components/forms/enquiry-form";
 import { OptionSelect } from "@/components/forms/option-select";
 import { Field } from "@/components/field";
@@ -213,11 +214,33 @@ function FollowUpForm({
         )}
       />
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Follow-up date" htmlFor="followUpDate" hint="When someone will contact the student again.">
-          <Input id="followUpDate" type="date" {...form.register("followUpDate")} />
+        <Field label="Follow-up date" hint="When someone will contact the student again.">
+          <Controller
+            control={form.control}
+            name="followUpDate"
+            render={({ field }) => (
+              <DateField
+                id="followUpDate"
+                label="Follow-up date"
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
+          />
         </Field>
-        <Field label="Next-action date" htmlFor="nextActionDate" hint="When the planned step should happen.">
-          <Input id="nextActionDate" type="date" {...form.register("nextActionDate")} />
+        <Field label="Next-action date" hint="When the planned step should happen.">
+          <Controller
+            control={form.control}
+            name="nextActionDate"
+            render={({ field }) => (
+              <DateField
+                id="nextActionDate"
+                label="Next-action date"
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
+          />
         </Field>
       </div>
       <Field label="Next action" htmlFor="nextAction">
@@ -269,8 +292,20 @@ function JoinDialog({
           noValidate
           onSubmit={form.handleSubmit(onConfirm)}
         >
-          <Field label="Joining date" htmlFor="joinedOn" error={errors.joinedOn?.message}>
-            <Input id="joinedOn" type="date" {...form.register("joinedOn")} />
+          <Field label="Joining date" error={errors.joinedOn?.message}>
+            <Controller
+              control={form.control}
+              name="joinedOn"
+              render={({ field }) => (
+                <DateField
+                  id="joinedOn"
+                  label="Joining date"
+                  value={field.value}
+                  onChange={field.onChange}
+                  invalid={!!errors.joinedOn}
+                />
+              )}
+            />
           </Field>
           <Field label="Batch" error={errors.batch?.message}>
             <Controller
@@ -287,6 +322,7 @@ function JoinDialog({
               type="number"
               min={1}
               {...form.register("agreedFee", { valueAsNumber: true })}
+              className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             />
           </Field>
           <Field label="Referral bonus" htmlFor="referralBonus" error={errors.referralBonus?.message}>
@@ -295,6 +331,7 @@ function JoinDialog({
               type="number"
               min={0}
               {...form.register("referralBonus", { valueAsNumber: true })}
+              className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             />
           </Field>
           <Field label="Referrer" htmlFor="referrerName" error={errors.referrerName?.message}>

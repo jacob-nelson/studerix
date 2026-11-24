@@ -6,6 +6,7 @@ import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { Facts } from "@/components/facts";
+import { DateField } from "@/components/forms/date-field";
 import { OptionSelect } from "@/components/forms/option-select";
 import { Field } from "@/components/field";
 import { PageHeader } from "@/components/page-header";
@@ -133,13 +134,25 @@ function PlacementEditor({
       <Field label="Salary" htmlFor="salary" error={errors.salary?.message}>
         <Input id="salary" placeholder="4.2 LPA" {...form.register("salary")} />
       </Field>
-      <Field label="Updated on" htmlFor="updatedOn" error={errors.updatedOn?.message}>
-        <Input id="updatedOn" type="date" {...form.register("updatedOn")} />
+      <Field label="Updated on" error={errors.updatedOn?.message}>
+        <Controller
+          control={form.control}
+          name="updatedOn"
+          render={({ field }) => (
+            <DateField
+              id="updatedOn"
+              label="Updated on"
+              value={field.value}
+              onChange={field.onChange}
+              invalid={!!errors.updatedOn}
+            />
+          )}
+        />
       </Field>
       <Field className="grid gap-1.5 sm:col-span-2" label="Notes" htmlFor="notes">
         <Textarea id="notes" rows={4} {...form.register("notes")} />
       </Field>
-      <div>
+      <div className="flex justify-end sm:col-span-2">
         <Button type="submit">Save placement</Button>
       </div>
     </form>

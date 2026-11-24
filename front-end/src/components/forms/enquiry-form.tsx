@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 
 import { Field } from "@/components/field";
+import { DateField } from "@/components/forms/date-field";
 import { OptionSelect } from "@/components/forms/option-select";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -36,8 +37,20 @@ export function EnquiryForm({
       noValidate
       onSubmit={form.handleSubmit(onSubmit)}
     >
-      <Field label="Enquiry date" htmlFor="enquiryDate" error={errors.enquiryDate?.message}>
-        <Input id="enquiryDate" type="date" {...form.register("enquiryDate")} aria-invalid={!!errors.enquiryDate} />
+      <Field label="Enquiry date" error={errors.enquiryDate?.message}>
+        <Controller
+          control={form.control}
+          name="enquiryDate"
+          render={({ field }) => (
+            <DateField
+              id="enquiryDate"
+              label="Enquiry date"
+              value={field.value}
+              onChange={field.onChange}
+              invalid={!!errors.enquiryDate}
+            />
+          )}
+        />
       </Field>
       <Field label="Student name" htmlFor="studentName" error={errors.studentName?.message}>
         <Input id="studentName" {...form.register("studentName")} aria-invalid={!!errors.studentName} />
@@ -115,19 +128,41 @@ export function EnquiryForm({
       </div>
       <Field
         label="Follow-up date"
-        htmlFor="followUpDate"
         hint="When someone will contact the student again."
         error={errors.followUpDate?.message}
       >
-        <Input id="followUpDate" type="date" {...form.register("followUpDate")} />
+        <Controller
+          control={form.control}
+          name="followUpDate"
+          render={({ field }) => (
+            <DateField
+              id="followUpDate"
+              label="Follow-up date"
+              value={field.value}
+              onChange={field.onChange}
+              invalid={!!errors.followUpDate}
+            />
+          )}
+        />
       </Field>
       <Field
         label="Next-action date"
-        htmlFor="nextActionDate"
         hint="When the planned step should happen, such as a visit or document handover."
         error={errors.nextActionDate?.message}
       >
-        <Input id="nextActionDate" type="date" {...form.register("nextActionDate")} />
+        <Controller
+          control={form.control}
+          name="nextActionDate"
+          render={({ field }) => (
+            <DateField
+              id="nextActionDate"
+              label="Next-action date"
+              value={field.value}
+              onChange={field.onChange}
+              invalid={!!errors.nextActionDate}
+            />
+          )}
+        />
       </Field>
       <Field
         className="grid gap-1.5 sm:col-span-2"
