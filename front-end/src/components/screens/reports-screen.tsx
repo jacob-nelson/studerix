@@ -17,6 +17,33 @@ import { accessLevel, canExport } from "@/lib/permissions";
 import { paymentRows, studentForAdmission } from "@/lib/records";
 import { useAcademy } from "@/lib/store";
 
+function ReportFilters({
+  period,
+  from,
+  to,
+  onPeriod,
+  onFrom,
+  onTo,
+}: {
+  period: Period;
+  from: string;
+  to: string;
+  onPeriod: (period: Period) => void;
+  onFrom: (value: string) => void;
+  onTo: (value: string) => void;
+}) {
+  return (
+    <>
+      <PeriodFilter period={period} from={from} to={to} onPeriod={onPeriod} onFrom={onFrom} onTo={onTo} />
+      <TabsList>
+        <TabsTrigger value="collections">Collections</TabsTrigger>
+        <TabsTrigger value="admissions">Admissions</TabsTrigger>
+        <TabsTrigger value="placements">Placements</TabsTrigger>
+      </TabsList>
+    </>
+  );
+}
+
 export function ReportsScreen() {
   const data = useAcademy();
   const level = data.user ? accessLevel(data.user.role, "reports") : "none";
@@ -165,21 +192,33 @@ export function ReportsScreen() {
           </Button>
         }
       />
-      <PeriodFilter period={period} from={from} to={to} onPeriod={setPeriod} onFrom={setFrom} onTo={setTo} />
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="collections">Collections</TabsTrigger>
-          <TabsTrigger value="admissions">Admissions</TabsTrigger>
-          <TabsTrigger value="placements">Placements</TabsTrigger>
-        </TabsList>
-        <TabsContent value="collections" className="pt-4">
-          <DataTable data={collections} columns={collectionColumns} searchPlaceholder="Search payments" />
+        <TabsContent value="collections">
+          <DataTable
+            data={collections}
+            columns={collectionColumns}
+            searchPlaceholder="Search payments"
+            searchAlign="end"
+            toolbar={<ReportFilters period={period} from={from} to={to} onPeriod={setPeriod} onFrom={setFrom} onTo={setTo} />}
+          />
         </TabsContent>
-        <TabsContent value="admissions" className="pt-4">
-          <DataTable data={admissions} columns={admissionColumns} searchPlaceholder="Search admissions" />
+        <TabsContent value="admissions">
+          <DataTable
+            data={admissions}
+            columns={admissionColumns}
+            searchPlaceholder="Search admissions"
+            searchAlign="end"
+            toolbar={<ReportFilters period={period} from={from} to={to} onPeriod={setPeriod} onFrom={setFrom} onTo={setTo} />}
+          />
         </TabsContent>
-        <TabsContent value="placements" className="pt-4">
-          <DataTable data={placements} columns={placementColumns} searchPlaceholder="Search placements" />
+        <TabsContent value="placements">
+          <DataTable
+            data={placements}
+            columns={placementColumns}
+            searchPlaceholder="Search placements"
+            searchAlign="end"
+            toolbar={<ReportFilters period={period} from={from} to={to} onPeriod={setPeriod} onFrom={setFrom} onTo={setTo} />}
+          />
         </TabsContent>
       </Tabs>
     </div>

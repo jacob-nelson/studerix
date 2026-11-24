@@ -46,19 +46,23 @@ export function AuditScreen() {
         title="Audit trail"
         description="Who changed what, including fee corrections. New entries from this session appear at the top."
       />
-      <OptionSelect
-        value={module}
-        onChange={setModule}
-        options={modules.map((item) => ({
-          value: item,
-          label: item === "all" ? "All modules" : item,
-        }))}
-      />
       <DataTable
         data={rows}
         columns={columns}
         searchPlaceholder="Search the trail"
+        searchAlign="end"
         initialSorting={[{ id: "at", desc: true }]}
+        toolbar={
+          <OptionSelect
+            className="w-56"
+            value={module}
+            onChange={setModule}
+            options={modules.map((item) => ({
+              value: item,
+              label: item === "all" ? "All modules" : item,
+            }))}
+          />
+        }
       />
     </div>
   );
