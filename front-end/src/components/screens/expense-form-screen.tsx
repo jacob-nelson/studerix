@@ -98,7 +98,11 @@ export function ExpenseFormScreen() {
                 )}
               />
             </Field>
-            <Button type="submit">Save expense</Button>
+            <div className="flex justify-end">
+              <Button type="submit" className="w-fit">
+                Save expense
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>

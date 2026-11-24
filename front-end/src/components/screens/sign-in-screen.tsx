@@ -53,9 +53,11 @@ export function SignInScreen() {
           />
         </Field>
         {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
-        <Button type="submit" size="lg">
-          Sign in
-        </Button>
+        <div className="flex justify-end">
+          <Button type="submit" className="w-fit">
+            Sign in
+          </Button>
+        </div>
         <Link href="/forgot-password" className="text-sm text-primary underline-offset-4 hover:underline">
           Forgot password
         </Link>

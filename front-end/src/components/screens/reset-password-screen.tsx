@@ -25,9 +25,11 @@ export function ResetPasswordScreen({ email }: { email: string }) {
       <div className="grid gap-4">
         <h1 className="font-heading text-3xl">Reset password</h1>
         <p className="text-sm text-muted-foreground">Start from the forgot-password screen so we know which login to update.</p>
-        <Button asChild>
-          <Link href="/forgot-password">Forgot password</Link>
-        </Button>
+        <div className="flex justify-end">
+          <Button asChild className="w-fit">
+            <Link href="/forgot-password">Forgot password</Link>
+          </Button>
+        </div>
       </div>
     );
   }
@@ -63,9 +65,11 @@ export function ResetPasswordScreen({ email }: { email: string }) {
         <Field label="Confirm password" htmlFor="confirm" error={form.formState.errors.confirm?.message}>
           <Input id="confirm" type="password" autoComplete="new-password" {...form.register("confirm")} />
         </Field>
-        <Button type="submit" size="lg">
-          Update password
-        </Button>
+        <div className="flex justify-end">
+          <Button type="submit" className="w-fit">
+            Update password
+          </Button>
+        </div>
         <Link href="/sign-in" className="text-sm text-primary underline-offset-4 hover:underline">
           Back to sign in
         </Link>

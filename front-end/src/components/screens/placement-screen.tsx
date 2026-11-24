@@ -153,7 +153,9 @@ function PlacementEditor({
         <Textarea id="notes" rows={4} {...form.register("notes")} />
       </Field>
       <div className="flex justify-end sm:col-span-2">
-        <Button type="submit">Save placement</Button>
+        <Button type="submit" className="w-fit">
+          Save placement
+        </Button>
       </div>
     </form>
   );

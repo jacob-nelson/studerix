@@ -96,7 +96,11 @@ export function StaffFormScreen() {
                 </div>
               )}
             />
-            <Button type="submit">Create login</Button>
+            <div className="flex justify-end">
+              <Button type="submit" className="w-fit">
+                Create login
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>

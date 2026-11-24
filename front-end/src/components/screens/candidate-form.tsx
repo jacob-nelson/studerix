@@ -80,8 +80,10 @@ export function CandidateForm({
       <Field className="grid gap-1.5 sm:col-span-2" label="Notes" htmlFor="notes">
         <Textarea id="notes" rows={4} {...form.register("notes")} />
       </Field>
-      <div>
-        <Button type="submit">{submitLabel}</Button>
+      <div className="flex justify-end sm:col-span-2">
+        <Button type="submit" className="w-fit">
+          {submitLabel}
+        </Button>
       </div>
     </form>
   );

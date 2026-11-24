@@ -25,11 +25,13 @@ export function ForgotPasswordScreen() {
           If {sentTo} is a staff login, a reset link would be sent. This prototype opens that
           screen directly.
         </p>
-        <Button asChild size="lg">
-          <Link href={`/reset-password?email=${encodeURIComponent(sentTo)}`}>
-            Continue to reset password
-          </Link>
-        </Button>
+        <div className="flex justify-end">
+          <Button asChild className="w-fit">
+            <Link href={`/reset-password?email=${encodeURIComponent(sentTo)}`}>
+              Continue to reset password
+            </Link>
+          </Button>
+        </div>
         <button
           type="button"
           className="text-left text-sm text-primary underline-offset-4 hover:underline"
@@ -57,9 +59,11 @@ export function ForgotPasswordScreen() {
         <Field label="Email" htmlFor="email" error={form.formState.errors.email?.message}>
           <Input id="email" type="email" autoComplete="username" {...form.register("email")} />
         </Field>
-        <Button type="submit" size="lg">
-          Send reset link
-        </Button>
+        <div className="flex justify-end">
+          <Button type="submit" className="w-fit">
+            Send reset link
+          </Button>
+        </div>
         <Link href="/sign-in" className="text-sm text-primary underline-offset-4 hover:underline">
           Back to sign in
         </Link>

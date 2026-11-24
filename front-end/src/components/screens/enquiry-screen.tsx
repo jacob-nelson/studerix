@@ -74,7 +74,7 @@ export function EnquiryScreen({ id }: { id: string }) {
               This enquiry is the same student as {admission.id}. Details are not typed again.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
+          <CardContent className="flex flex-wrap justify-end gap-2">
             <Button asChild>
               <Link href={`/admissions/${admission.id}`}>Open fee record</Link>
             </Button>
@@ -118,8 +118,10 @@ export function EnquiryScreen({ id }: { id: string }) {
                 : " This course does not open an internal placement."}
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button onClick={() => setOpen(true)}>Continue to admission</Button>
+          <CardContent className="flex justify-end">
+            <Button className="w-fit" onClick={() => setOpen(true)}>
+              Continue to admission
+            </Button>
           </CardContent>
         </Card>
       ) : null}
@@ -249,7 +251,11 @@ function FollowUpForm({
       <Field label="Remarks" htmlFor="remarks">
         <Textarea id="remarks" rows={4} {...form.register("remarks")} />
       </Field>
-      <Button type="submit">Save follow-up</Button>
+      <div className="flex justify-end">
+        <Button type="submit" className="w-fit">
+          Save follow-up
+        </Button>
+      </div>
     </form>
   );
 }
@@ -339,7 +345,7 @@ function JoinDialog({
           </Field>
         </form>
         <DialogFooter>
-          <Button type="submit" form="join-form">
+          <Button type="submit" form="join-form" className="w-fit">
             Mark Joined
           </Button>
         </DialogFooter>

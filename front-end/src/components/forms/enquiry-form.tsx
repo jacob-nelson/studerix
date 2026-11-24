@@ -180,8 +180,8 @@ export function EnquiryForm({
       >
         <Textarea id="remarks" rows={4} {...form.register("remarks")} />
       </Field>
-      <div className="sm:col-span-2">
-        <Button type="submit" size="lg">
+      <div className="flex justify-end sm:col-span-2">
+        <Button type="submit" className="w-fit">
           {submitLabel}
         </Button>
       </div>

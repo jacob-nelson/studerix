@@ -98,7 +98,11 @@ export function LedgerForm({
       <Field label="Note" htmlFor="note" error={errors.note?.message}>
         <Input id="note" {...form.register("note")} />
       </Field>
-      <Button type="submit">Save entry</Button>
+      <div className="flex justify-end">
+        <Button type="submit" className="w-fit">
+          Save entry
+        </Button>
+      </div>
     </form>
   );
 }
