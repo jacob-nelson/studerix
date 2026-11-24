@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   type ColumnDef,
   type RowData,
@@ -56,6 +56,7 @@ export function DataTable<T extends RowData & { id: string }>({
   data,
   columns,
   searchPlaceholder = "Search this list",
+  toolbar,
   onRowClick,
   initialSorting = [],
   pageSize = 8,
@@ -63,6 +64,7 @@ export function DataTable<T extends RowData & { id: string }>({
   data: T[];
   columns: AppColumn<T>[];
   searchPlaceholder?: string;
+  toolbar?: ReactNode;
   onRowClick?: (row: T) => void;
   initialSorting?: SortingState;
   pageSize?: number;
@@ -96,13 +98,16 @@ export function DataTable<T extends RowData & { id: string }>({
 
   return (
     <div className="grid gap-3">
-      <Input
-        value={globalFilter}
-        onChange={(event) => table.setGlobalFilter(event.target.value)}
-        placeholder={searchPlaceholder}
-        aria-label={searchPlaceholder}
-        className="max-w-sm bg-card"
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        {toolbar}
+        <Input
+          value={globalFilter}
+          onChange={(event) => table.setGlobalFilter(event.target.value)}
+          placeholder={searchPlaceholder}
+          aria-label={searchPlaceholder}
+          className="w-full min-w-48 flex-1 bg-card sm:max-w-sm"
+        />
+      </div>
       <div className="overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
         <Table>
           <TableHeader>

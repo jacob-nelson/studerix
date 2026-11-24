@@ -98,22 +98,26 @@ export function EnquiriesScreen() {
           ) : null
         }
       />
-      <div className="flex flex-wrap gap-2">
-        <OptionSelect
-          value={status}
-          onChange={setStatus}
-          options={[{ value: "all", label: "All statuses" }, ...ENQUIRY_STATUSES]}
-        />
-        <OptionSelect
-          value={course}
-          onChange={setCourse}
-          options={[{ value: "all", label: "All courses" }, ...COURSES]}
-        />
-      </div>
       <DataTable
         data={rows}
         columns={columns}
         searchPlaceholder="Search enquiries"
+        toolbar={
+          <>
+            <OptionSelect
+              className="w-44"
+              value={status}
+              onChange={setStatus}
+              options={[{ value: "all", label: "All statuses" }, ...ENQUIRY_STATUSES]}
+            />
+            <OptionSelect
+              className="w-56"
+              value={course}
+              onChange={setCourse}
+              options={[{ value: "all", label: "All courses" }, ...COURSES]}
+            />
+          </>
+        }
         initialSorting={[{ id: "enquiryDate", desc: true }]}
         onRowClick={(row) => router.push(`/enquiries/${row.id}`)}
       />
