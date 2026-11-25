@@ -12,8 +12,8 @@ import { useAcademy } from "@/lib/store";
 import type { AuditEvent } from "@/lib/types";
 
 export function AuditScreen() {
-  const { audit, user } = useAcademy();
-  const level = user ? accessLevel(user.role, "audit") : "none";
+  const { audit, user, permissions } = useAcademy();
+  const level = user ? accessLevel(user.role, "audit", permissions) : "none";
   const [module, setModule] = useState("all");
   const modules = useMemo(
     () => ["all", ...Array.from(new Set(audit.map((event) => event.module)))],

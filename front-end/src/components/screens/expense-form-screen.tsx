@@ -22,7 +22,7 @@ import { useAcademy } from "@/lib/store";
 export function ExpenseFormScreen() {
   const data = useAcademy();
   const router = useRouter();
-  const level = data.user ? accessLevel(data.user.role, "expenses") : "none";
+  const level = data.user ? accessLevel(data.user.role, "expenses", data.permissions) : "none";
   const staff = data.staff.filter((user) => user.active).map((user) => user.name);
   const form = useForm<ExpenseInput>({
     resolver: zodResolver(expenseSchema),

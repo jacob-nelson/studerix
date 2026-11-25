@@ -17,14 +17,14 @@ import { useAcademy } from "@/lib/store";
 export function ConsultancyDetailScreen({ id }: { id: string }) {
   const data = useAcademy();
   const candidate = data.consultancy.find((item) => item.id === id);
-  const level = data.user ? accessLevel(data.user.role, "consultancy") : "none";
+  const level = data.user ? accessLevel(data.user.role, "consultancy", data.permissions) : "none";
 
   if (level === "none") return <AccessDenied />;
   if (!candidate || !data.user) return <MissingRecord href="/consultancy" label="Back to consultancy" />;
 
   const paid = paidAmount(candidate.collections);
   const balance = balanceAmount(candidate.agreedFee, candidate.collections);
-  const fees = canRecordFees(data.user.role);
+  const fees = canRecordFees(data.user.role, data.permissions);
 
   return (
     <div className="mx-auto grid w-full max-w-3xl gap-6">

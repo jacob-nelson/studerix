@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { toast } from "sonner";
 
+import { AdmissionStatusActions } from "@/components/admission-status";
 import { Facts } from "@/components/facts";
 import { LedgerForm } from "@/components/forms/ledger-form";
 import { PageHeader } from "@/components/page-header";
@@ -12,13 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, formatInr, formatPhone } from "@/lib/format";
 import { accessLevel, canRecordFees } from "@/lib/permissions";
-import { balanceAmount, paidAmount, studentForAdmission } from "@/lib/records";
+import { balanceAmount, paidAmount, scheduleAmounts, studentForAdmission } from "@/lib/records";
 import { useAcademy } from "@/lib/store";
 
 export function AdmissionScreen({ id }: { id: string }) {
   const data = useAcademy();
   const admission = data.admissions.find((item) => item.id === id);
-  const level = data.user ? accessLevel(data.user.role, "admissions") : "none";
+  const level = data.user ? accessLevel(data.user.role, "admissions", data.permissions) : "none";
 
   if (level === "none") return <AccessDenied />;
   if (!admission || !data.user) return <MissingRecord href="/admissions" label="Back to fees" />;
@@ -28,7 +29,8 @@ export function AdmissionScreen({ id }: { id: string }) {
   const balance = balanceAmount(admission.agreedFee, admission.instalments);
   const width = admission.agreedFee > 0 ? Math.min(100, Math.max(0, (paid / admission.agreedFee) * 100)) : 0;
   const placement = data.placements.find((item) => item.admissionId === admission.id);
-  const fees = canRecordFees(data.user.role);
+  const batch = data.batches.find((item) => item.id === admission.batchId);
+  const fees = canRecordFees(data.user.role, data.permissions);
 
   return (
     <div className="mx-auto grid w-full max-w-3xl gap-6">
@@ -37,9 +39,13 @@ export function AdmissionScreen({ id }: { id: string }) {
         title={student.name}
         description={`${student.course} · ${admission.batch}`}
         actions={
-          <Button asChild variant="outline">
-            <Link href={`/enquiries/${admission.enquiryId}`}>Enquiry</Link>
-          </Button>
+          <>
+            <StatusBadge value={admission.status} />
+            <AdmissionStatusActions admission={admission} studentName={student.name} />
+            <Button asChild variant="outline">
+              <Link href={`/enquiries/${admission.enquiryId}`}>Enquiry</Link>
+            </Button>
+          </>
         }
       />
       <Card>
@@ -71,6 +77,33 @@ export function AdmissionScreen({ id }: { id: string }) {
       </Card>
       <Card>
         <CardHeader>
+          <CardTitle>Payment schedule</CardTitle>
+          <CardDescription>
+            {admission.feePlanName || "No plan was chosen for this admission."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {admission.feeSchedule.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Fee plans are defined on the course. Choose one when the student is admitted.
+            </p>
+          ) : (
+            <ul className="grid gap-2">
+              {scheduleAmounts(admission.agreedFee, admission.feeSchedule).map((part) => (
+                <li key={`${part.label}-${part.percent}`} className="flex items-center justify-between gap-3 text-sm">
+                  <span>
+                    {part.label}
+                    <span className="ml-2 text-muted-foreground">{part.percent}%</span>
+                  </span>
+                  <span className="tabular-nums">{formatInr(part.amount)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
           <CardTitle>Student record</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
@@ -79,7 +112,24 @@ export function AdmissionScreen({ id }: { id: string }) {
               { label: "Contact", value: formatPhone(student.contact) },
               { label: "Email", value: student.email },
               { label: "Source", value: student.source },
+              { label: "Status", value: admission.status },
+              {
+                label: "Batch",
+                value: batch ? (
+                  <Link href={`/courses/${batch.courseId}`} className="underline-offset-4 hover:underline">
+                    {batch.name}
+                  </Link>
+                ) : (
+                  admission.batch
+                ),
+              },
               { label: "Joined", value: formatDate(admission.joinedOn) },
+              ...(admission.status === "Discontinued"
+                ? [
+                    { label: "Left on", value: formatDate(admission.discontinuedOn) },
+                    { label: "Reason", value: admission.discontinueReason },
+                  ]
+                : []),
               {
                 label: "Referral bonus",
                 value: admission.referralBonus
@@ -133,7 +183,7 @@ export function AdmissionScreen({ id }: { id: string }) {
         </CardContent>
       </Card>
       {fees ? (
-        <Card>
+        <Card id="fees">
           <CardHeader>
             <CardTitle>Record a payment or refund</CardTitle>
             <CardDescription>

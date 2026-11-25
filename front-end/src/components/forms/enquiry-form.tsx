@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { enquirySchema, type EnquiryInput } from "@/lib/schemas";
+import { useAcademy } from "@/lib/store";
 import { COURSES, ENQUIRY_STATUSES, SOURCES } from "@/lib/types";
 
 const OPEN_STATUSES = ENQUIRY_STATUSES.filter((status) => status !== "Joined");
@@ -25,6 +26,10 @@ export function EnquiryForm({
   submitLabel: string;
   onSubmit: (values: EnquiryInput) => void;
 }) {
+  const { courses } = useAcademy();
+  const courseOptions = courses.length
+    ? courses.map((course) => course.name)
+    : [...COURSES];
   const form = useForm<EnquiryInput>({
     resolver: zodResolver(enquirySchema),
     defaultValues,
@@ -84,7 +89,11 @@ export function EnquiryForm({
             <OptionSelect
               value={field.value}
               onChange={field.onChange}
-              options={COURSES}
+              options={
+                courseOptions.includes(field.value) || !field.value
+                  ? courseOptions
+                  : [field.value, ...courseOptions]
+              }
               placeholder="Course"
               invalid={!!errors.course}
             />

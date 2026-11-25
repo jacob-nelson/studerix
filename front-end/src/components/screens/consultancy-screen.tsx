@@ -28,7 +28,7 @@ interface ConsultancyRow {
 export function ConsultancyScreen() {
   const data = useAcademy();
   const router = useRouter();
-  const level = data.user ? accessLevel(data.user.role, "consultancy") : "none";
+  const level = data.user ? accessLevel(data.user.role, "consultancy", data.permissions) : "none";
   const rows = useMemo<ConsultancyRow[]>(
     () =>
       data.consultancy.map((candidate) => ({

@@ -4,8 +4,12 @@ export const ROLES = [
   "Finance",
   "Placement",
   "Management",
+  "Faculty",
 ] as const;
 export type Role = (typeof ROLES)[number];
+
+export const STAFF_KINDS = ["Teaching", "Non-teaching"] as const;
+export type StaffKind = (typeof STAFF_KINDS)[number];
 
 export const COURSES = [
   "Software Testing",
@@ -70,9 +74,16 @@ export const BATCHES = [
   "PY-Jan-2027",
 ] as const;
 
+export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+export type Weekday = (typeof WEEKDAYS)[number];
+
+export const ADMISSION_STATUSES = ["Active", "Completed", "Discontinued"] as const;
+export type AdmissionStatus = (typeof ADMISSION_STATUSES)[number];
+
 export type ModuleKey =
   | "dashboard"
   | "enquiries"
+  | "courses"
   | "admissions"
   | "expenses"
   | "placements"
@@ -91,7 +102,7 @@ export interface Enquiry {
   email: string;
   groupAdded: boolean;
   source: Source;
-  course: Course;
+  course: string;
   status: EnquiryStatus;
   remarks: string;
   followUpDate: string;
@@ -109,15 +120,67 @@ export interface LedgerEntry {
   note: string;
 }
 
+export interface SyllabusTopic {
+  id: string;
+  title: string;
+  hours: number;
+}
+
+export interface FeePart {
+  label: string;
+  percent: number;
+}
+
+export interface FeePlan {
+  id: string;
+  name: string;
+  parts: FeePart[];
+}
+
+export interface ClassSlot {
+  id: string;
+  day: Weekday;
+  start: string;
+  end: string;
+  topic: string;
+}
+
+export interface CourseOffering {
+  id: string;
+  name: string;
+  durationWeeks: number;
+  fee: number;
+  summary: string;
+  opensPlacement: boolean;
+  syllabus: SyllabusTopic[];
+  feePlans: FeePlan[];
+}
+
+export interface Batch {
+  id: string;
+  courseId: string;
+  name: string;
+  startsOn: string;
+  endsOn: string;
+  schedule: ClassSlot[];
+  staffIds: string[];
+}
+
 export interface Admission {
   id: string;
   enquiryId: string;
   batch: string;
+  batchId: string;
+  status: AdmissionStatus;
+  discontinuedOn: string;
+  discontinueReason: string;
   source: Source;
   referralBonus: number;
   referrerName: string;
   agreedFee: number;
   joinedOn: string;
+  feePlanName: string;
+  feeSchedule: FeePart[];
   instalments: LedgerEntry[];
 }
 
@@ -158,6 +221,7 @@ export interface StaffUser {
   id: string;
   name: string;
   email: string;
+  kind: StaffKind;
   role: Role;
   active: boolean;
   password: string;
@@ -173,6 +237,10 @@ export interface AuditEvent {
 }
 
 export interface AcademyData {
+  permissions: Record<Role, Record<ModuleKey, AccessLevel>>;
+  exportRoles: Role[];
+  courses: CourseOffering[];
+  batches: Batch[];
   enquiries: Enquiry[];
   admissions: Admission[];
   expenses: Expense[];

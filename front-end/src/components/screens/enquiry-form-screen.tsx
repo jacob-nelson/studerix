@@ -30,9 +30,9 @@ const defaults: EnquiryInput = {
 };
 
 export function EnquiryFormScreen() {
-  const { addEnquiry, user } = useAcademy();
+  const { addEnquiry, user, permissions } = useAcademy();
   const router = useRouter();
-  const level = user ? accessLevel(user.role, "enquiries") : "none";
+  const level = user ? accessLevel(user.role, "enquiries", permissions) : "none";
   if (level !== "write" || !user) return <AccessDenied />;
 
   return (

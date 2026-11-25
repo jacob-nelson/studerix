@@ -2,13 +2,14 @@ import { z } from "zod";
 
 import {
   CONSULTANCY_STATUSES,
-  COURSES,
   ENQUIRY_STATUSES,
   MOCK_RANKS,
   PAYMENT_MODES,
   PLACEMENT_STATUSES,
   ROLES,
   SOURCES,
+  STAFF_KINDS,
+  WEEKDAYS,
 } from "@/lib/types";
 
 const mobile = z
@@ -47,7 +48,7 @@ export const enquirySchema = z.object({
   email: z.email("Enter a valid email"),
   groupAdded: z.boolean(),
   source: z.enum(SOURCES, "Choose a source"),
-  course: z.enum(COURSES, "Choose a course"),
+  course: z.string().min(1, "Choose a course"),
   status: z.enum(ENQUIRY_STATUSES, "Choose a status"),
   remarks: z.string().trim().max(500, "Keep remarks within 500 characters"),
   followUpDate: z.string(),
@@ -67,6 +68,7 @@ export const joinSchema = z
   .object({
     joinedOn: z.string().min(1, "Enter the joining date"),
     batch: z.string().min(1, "Choose a batch"),
+    feePlanId: z.string(),
     agreedFee: rupee("Enter the agreed course fee"),
     referralBonus: rupee("Referral bonus cannot be negative", true),
     referrerName: z.string().trim(),
@@ -134,9 +136,86 @@ export const consultancySchema = z.object({
 export const staffSchema = z.object({
   name: z.string().trim().min(2, "Enter the staff name"),
   email: z.email("Enter a valid email"),
+  kind: z.enum(STAFF_KINDS, "Choose teaching or non-teaching"),
   role: z.enum(ROLES, "Choose a role"),
   password: z.string().min(8, "Use at least 8 characters"),
   active: z.boolean(),
+});
+
+const weeks = z.number({ error: "Enter the duration in weeks" }).int().positive("Enter the duration in weeks");
+
+export const courseSchema = z.object({
+  name: z.string().trim().min(2, "Enter the course name"),
+  durationWeeks: weeks,
+  fee: rupee("Enter the course fee"),
+  summary: z.string().trim().max(300, "Keep the summary within 300 characters"),
+  opensPlacement: z.boolean(),
+});
+
+export const syllabusSchema = z.object({
+  title: z.string().trim().min(2, "Enter the topic"),
+  hours: z.number({ error: "Enter the hours" }).positive("Enter the hours"),
+});
+
+const share = z
+  .number({ error: "Enter a percentage" })
+  .int("Use a whole percentage")
+  .min(1, "Enter a percentage")
+  .max(100, "A part cannot exceed 100%");
+
+export const feePlanSchema = z
+  .object({
+    name: z.string().trim().min(2, "Name the plan"),
+    parts: z
+      .array(
+        z.object({
+          label: z.string().trim().min(2, "Name this part"),
+          percent: share,
+        }),
+      )
+      .min(1, "Add at least one part")
+      .max(6, "Keep a plan to six parts"),
+  })
+  .refine((value) => value.parts.reduce((sum, part) => sum + part.percent, 0) === 100, {
+    path: ["name"],
+    message: "The parts must add up to 100%",
+  });
+
+export const scheduleSchema = z.object({
+  day: z.enum(WEEKDAYS, "Choose a day"),
+  start: z.string().trim().min(4, "Enter the start time"),
+  end: z.string().trim().min(4, "Enter the end time"),
+  topic: z.string().trim().min(2, "Enter what is taught"),
+});
+
+export const batchSchema = z.object({
+  name: z.string().trim().min(2, "Enter the batch name"),
+  startsOn: z.string().min(1, "Enter the start date"),
+  endsOn: z.string().min(1, "Enter the end date"),
+});
+
+export const directAdmissionSchema = z
+  .object({
+    studentName: z.string().trim().min(2, "Enter the student name"),
+    contact: mobile,
+    email: z.email("Enter a valid email"),
+    source: z.enum(SOURCES, "Choose a source"),
+    courseId: z.string().min(1, "Choose a course"),
+    batchId: z.string().min(1, "Choose a batch"),
+    feePlanId: z.string(),
+    joinedOn: z.string().min(1, "Enter the joining date"),
+    agreedFee: rupee("Enter the agreed course fee"),
+    referralBonus: rupee("Referral bonus cannot be negative", true),
+    referrerName: z.string().trim(),
+  })
+  .refine((value) => value.referralBonus === 0 || value.referrerName.length > 1, {
+    path: ["referrerName"],
+    message: "Name the referrer when a bonus is recorded",
+  });
+
+export const discontinueSchema = z.object({
+  discontinuedOn: z.string().min(1, "Enter the date"),
+  discontinueReason: z.string().trim().min(3, "Enter why the student is leaving"),
 });
 
 export type SignInInput = z.infer<typeof signInSchema>;
@@ -150,3 +229,10 @@ export type ExpenseInput = z.infer<typeof expenseSchema>;
 export type PlacementInput = z.infer<typeof placementSchema>;
 export type ConsultancyInput = z.infer<typeof consultancySchema>;
 export type StaffInput = z.infer<typeof staffSchema>;
+export type CourseInput = z.infer<typeof courseSchema>;
+export type SyllabusInput = z.infer<typeof syllabusSchema>;
+export type FeePlanInput = z.infer<typeof feePlanSchema>;
+export type ScheduleInput = z.infer<typeof scheduleSchema>;
+export type BatchInput = z.infer<typeof batchSchema>;
+export type DirectAdmissionInput = z.infer<typeof directAdmissionSchema>;
+export type DiscontinueInput = z.infer<typeof discontinueSchema>;

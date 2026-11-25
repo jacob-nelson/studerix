@@ -1,9 +1,12 @@
-import type { AccessLevel, ModuleKey, Role } from "@/lib/types";
+import { ROLES, type AccessLevel, type ModuleKey, type Role } from "@/lib/types";
 
-const MATRIX: Record<Role, Record<ModuleKey, AccessLevel>> = {
+export type PermissionMatrix = Record<Role, Record<ModuleKey, AccessLevel>>;
+
+export const DEFAULT_MATRIX: PermissionMatrix = {
   Administrator: {
     dashboard: "write",
     enquiries: "write",
+    courses: "write",
     admissions: "write",
     expenses: "write",
     placements: "write",
@@ -15,6 +18,7 @@ const MATRIX: Record<Role, Record<ModuleKey, AccessLevel>> = {
   Admissions: {
     dashboard: "read",
     enquiries: "write",
+    courses: "write",
     admissions: "read",
     expenses: "none",
     placements: "read",
@@ -26,6 +30,7 @@ const MATRIX: Record<Role, Record<ModuleKey, AccessLevel>> = {
   Finance: {
     dashboard: "read",
     enquiries: "read",
+    courses: "read",
     admissions: "write",
     expenses: "write",
     placements: "none",
@@ -37,6 +42,7 @@ const MATRIX: Record<Role, Record<ModuleKey, AccessLevel>> = {
   Placement: {
     dashboard: "read",
     enquiries: "read",
+    courses: "read",
     admissions: "read",
     expenses: "none",
     placements: "write",
@@ -48,6 +54,7 @@ const MATRIX: Record<Role, Record<ModuleKey, AccessLevel>> = {
   Management: {
     dashboard: "read",
     enquiries: "read",
+    courses: "read",
     admissions: "read",
     expenses: "read",
     placements: "read",
@@ -56,28 +63,61 @@ const MATRIX: Record<Role, Record<ModuleKey, AccessLevel>> = {
     staff: "read",
     audit: "read",
   },
+  Faculty: {
+    dashboard: "read",
+    enquiries: "read",
+    courses: "read",
+    admissions: "read",
+    expenses: "none",
+    placements: "none",
+    consultancy: "none",
+    reports: "none",
+    staff: "none",
+    audit: "none",
+  },
 };
 
-export function accessLevel(role: Role, module: ModuleKey): AccessLevel {
-  return MATRIX[role][module];
+export const DEFAULT_EXPORT_ROLES: Role[] = ["Administrator", "Finance", "Management"];
+
+export function copyPermissions(): PermissionMatrix {
+  return ROLES.reduce((matrix, role) => {
+    matrix[role] = { ...DEFAULT_MATRIX[role] };
+    return matrix;
+  }, {} as PermissionMatrix);
 }
 
-export function canExport(role: Role) {
-  return role === "Administrator" || role === "Finance" || role === "Management";
+export function accessLevel(role: Role, module: ModuleKey, permissions: PermissionMatrix): AccessLevel {
+  return permissions[role][module];
 }
 
-export function canRecordFees(role: Role) {
-  return role === "Administrator" || role === "Finance";
+export function canExport(role: Role, exportRoles: readonly Role[]) {
+  return exportRoles.includes(role);
+}
+
+export function canRecordFees(role: Role, permissions: PermissionMatrix) {
+  return accessLevel(role, "admissions", permissions) === "write";
+}
+
+export function canManageCourses(role: Role, permissions: PermissionMatrix) {
+  return accessLevel(role, "courses", permissions) === "write";
+}
+
+export function canManageAdmissions(role: Role, permissions: PermissionMatrix) {
+  return (
+    (role === "Administrator" || role === "Admissions") &&
+    accessLevel(role, "admissions", permissions) !== "none"
+  );
 }
 
 export const NAV_ITEMS: { href: string; label: string; module: ModuleKey }[] = [
   { href: "/dashboard", label: "Dashboard", module: "dashboard" },
   { href: "/enquiries", label: "Enquiries", module: "enquiries" },
+  { href: "/courses", label: "Courses", module: "courses" },
   { href: "/admissions", label: "Admissions & fees", module: "admissions" },
   { href: "/expenses", label: "Expenses", module: "expenses" },
   { href: "/placements", label: "Internal placements", module: "placements" },
   { href: "/consultancy", label: "Consultancy", module: "consultancy" },
   { href: "/reports", label: "Reports", module: "reports" },
-  { href: "/staff", label: "Staff access", module: "staff" },
+  { href: "/staff", label: "Staff", module: "staff" },
   { href: "/audit", label: "Audit trail", module: "audit" },
 ];

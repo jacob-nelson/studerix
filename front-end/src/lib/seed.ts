@@ -1,3 +1,6 @@
+import { seedBatches, seedCourses } from "@/lib/catalog-seed";
+import { DEFAULT_EXPORT_ROLES, copyPermissions } from "@/lib/permissions";
+import { paidAmount } from "@/lib/records";
 import type { AcademyData } from "@/lib/types";
 
 export const DEMO_PASSWORD = "demo1234";
@@ -31,12 +34,15 @@ export const DEMO_ACCOUNTS = [
 ];
 
 export function createSeed(): AcademyData {
-  return {
+  const draft: AcademyData = {
+    permissions: copyPermissions(),
+    exportRoles: [...DEFAULT_EXPORT_ROLES],
     staff: [
       ...DEMO_ACCOUNTS.map((account, index) => ({
         id: `STF-${String(index + 1).padStart(4, "0")}`,
         name: account.name,
         email: account.email,
+        kind: "Non-teaching" as const,
         role: account.role,
         active: true,
         password: DEMO_PASSWORD,
@@ -45,8 +51,36 @@ export function createSeed(): AcademyData {
         id: "STF-0006",
         name: "Arun Das",
         email: "former@gotechmasters.com",
+        kind: "Non-teaching" as const,
         role: "Admissions",
         active: false,
+        password: DEMO_PASSWORD,
+      },
+      {
+        id: "STF-0007",
+        name: "Priya Nair",
+        email: "priya.nair@gotechmasters.com",
+        kind: "Teaching" as const,
+        role: "Faculty",
+        active: true,
+        password: DEMO_PASSWORD,
+      },
+      {
+        id: "STF-0008",
+        name: "Joseph Mathew",
+        email: "joseph.mathew@gotechmasters.com",
+        kind: "Teaching" as const,
+        role: "Faculty",
+        active: true,
+        password: DEMO_PASSWORD,
+      },
+      {
+        id: "STF-0009",
+        name: "Nisha George",
+        email: "nisha.george@gotechmasters.com",
+        kind: "Non-teaching" as const,
+        role: "Faculty",
+        active: true,
         password: DEMO_PASSWORD,
       },
     ],
@@ -242,6 +276,12 @@ export function createSeed(): AcademyData {
         referrerName: "Sreejith (alumni)",
         agreedFee: 55000,
         joinedOn: "2026-11-02",
+        status: "Active",
+        batchId: "",
+        discontinuedOn: "",
+        discontinueReason: "",
+        feePlanName: "",
+        feeSchedule: [],
         instalments: [
           {
             id: "PAY-0001",
@@ -272,6 +312,12 @@ export function createSeed(): AcademyData {
         referrerName: "",
         agreedFee: 55000,
         joinedOn: "2026-10-18",
+        status: "Active",
+        batchId: "",
+        discontinuedOn: "",
+        discontinueReason: "",
+        feePlanName: "",
+        feeSchedule: [],
         instalments: [
           {
             id: "PAY-0003",
@@ -311,6 +357,12 @@ export function createSeed(): AcademyData {
         referrerName: "",
         agreedFee: 48000,
         joinedOn: "2026-11-12",
+        status: "Active",
+        batchId: "",
+        discontinuedOn: "",
+        discontinueReason: "",
+        feePlanName: "",
+        feeSchedule: [],
         instalments: [
           {
             id: "PAY-0006",
@@ -332,6 +384,12 @@ export function createSeed(): AcademyData {
         referrerName: "",
         agreedFee: 72000,
         joinedOn: "2026-11-05",
+        status: "Active",
+        batchId: "",
+        discontinuedOn: "",
+        discontinueReason: "",
+        feePlanName: "",
+        feeSchedule: [],
         instalments: [
           {
             id: "PAY-0007",
@@ -362,6 +420,12 @@ export function createSeed(): AcademyData {
         referrerName: "",
         agreedFee: 55000,
         joinedOn: "2026-09-20",
+        status: "Active",
+        batchId: "",
+        discontinuedOn: "",
+        discontinueReason: "",
+        feePlanName: "",
+        feeSchedule: [],
         instalments: [
           {
             id: "PAY-0009",
@@ -392,6 +456,12 @@ export function createSeed(): AcademyData {
         referrerName: "",
         agreedFee: 60000,
         joinedOn: "2026-11-08",
+        status: "Active",
+        batchId: "",
+        discontinuedOn: "",
+        discontinueReason: "",
+        feePlanName: "",
+        feeSchedule: [],
         instalments: [],
       },
     ],
@@ -645,5 +715,27 @@ export function createSeed(): AcademyData {
         detail: "Devika Suresh joined ST-Nov-2026 with a ₹2,000 referral bonus.",
       },
     ],
+    courses: seedCourses,
+    batches: seedBatches,
+  };
+  return {
+    ...draft,
+    admissions: draft.admissions.map((admission) => {
+      const enquiry = draft.enquiries.find((item) => item.id === admission.enquiryId);
+      const course = seedCourses.find((item) => item.name === enquiry?.course);
+      const paid = paidAmount(admission.instalments);
+      const plan =
+        course?.feePlans.find((item) =>
+          paid > 0 && paid < admission.agreedFee
+            ? item.name === "50% in advance"
+            : item.name === "Full payment in advance",
+        ) ?? course?.feePlans[0];
+      return {
+        ...admission,
+        batchId: seedBatches.find((batch) => batch.name === admission.batch)?.id ?? "",
+        feePlanName: plan?.name ?? "",
+        feeSchedule: plan?.parts.map((part) => ({ ...part })) ?? [],
+      };
+    }),
   };
 }

@@ -49,6 +49,13 @@ export function suggestedBatch(course: string) {
   return "PY-Jan-2027";
 }
 
+export function addWeeks(iso: string, weeks: number) {
+  const [year, month, day] = iso.split("-").map(Number);
+  const date = new Date(year, (month || 1) - 1, day || 1);
+  date.setDate(date.getDate() + weeks * 7);
+  return isoDate(date);
+}
+
 export function suggestedFee(course: string) {
   if (course === "Software Testing") return 55000;
   if (course === "Full Stack Development") return 72000;

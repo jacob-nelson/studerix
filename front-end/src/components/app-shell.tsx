@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   BarChart3,
+  BookOpen,
   Briefcase,
   GraduationCap,
   Inbox,
@@ -43,6 +44,7 @@ import { cn } from "@/lib/utils";
 const ICONS: Record<ModuleKey, typeof LayoutDashboard> = {
   dashboard: LayoutDashboard,
   enquiries: Inbox,
+  courses: BookOpen,
   admissions: GraduationCap,
   expenses: Receipt,
   placements: Briefcase,
@@ -54,12 +56,12 @@ const ICONS: Record<ModuleKey, typeof LayoutDashboard> = {
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const { user } = useAcademy();
+  const { user, permissions } = useAcademy();
   if (!user) return null;
 
   return (
     <nav className="grid gap-1 px-3">
-      {NAV_ITEMS.filter((item) => accessLevel(user.role, item.module) !== "none").map((item) => {
+      {NAV_ITEMS.filter((item) => accessLevel(user.role, item.module, permissions) !== "none").map((item) => {
         const Icon = ICONS[item.module];
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (

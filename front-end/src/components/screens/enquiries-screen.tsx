@@ -13,14 +13,14 @@ import { Button } from "@/components/ui/button";
 import { formatDate, formatPhone } from "@/lib/format";
 import { accessLevel } from "@/lib/permissions";
 import { useAcademy } from "@/lib/store";
-import { COURSES, ENQUIRY_STATUSES, type Enquiry } from "@/lib/types";
+import { ENQUIRY_STATUSES, type Enquiry } from "@/lib/types";
 
 export function EnquiriesScreen() {
-  const { enquiries, user } = useAcademy();
+  const { enquiries, courses, user, permissions } = useAcademy();
   const router = useRouter();
   const [status, setStatus] = useState("all");
   const [course, setCourse] = useState("all");
-  const level = user ? accessLevel(user.role, "enquiries") : "none";
+  const level = user ? accessLevel(user.role, "enquiries", permissions) : "none";
 
   const rows = useMemo(
     () =>
@@ -114,7 +114,10 @@ export function EnquiriesScreen() {
               className="w-56"
               value={course}
               onChange={setCourse}
-              options={[{ value: "all", label: "All courses" }, ...COURSES]}
+              options={[
+                { value: "all", label: "All courses" },
+                ...courses.map((item) => item.name),
+              ]}
             />
           </>
         }

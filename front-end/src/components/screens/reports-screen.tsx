@@ -46,13 +46,13 @@ function ReportFilters({
 
 export function ReportsScreen() {
   const data = useAcademy();
-  const level = data.user ? accessLevel(data.user.role, "reports") : "none";
+  const level = data.user ? accessLevel(data.user.role, "reports", data.permissions) : "none";
   const [period, setPeriod] = useState<Period>("month");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [tab, setTab] = useState("collections");
   const bounds = periodBounds(period, from, to);
-  const allowed = data.user ? canExport(data.user.role) : false;
+  const allowed = data.user ? canExport(data.user.role, data.exportRoles) : false;
 
   const collections = useMemo(
     () =>

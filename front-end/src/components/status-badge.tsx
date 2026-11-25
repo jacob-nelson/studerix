@@ -20,7 +20,11 @@ const TONES: Record<string, string> = {
   Placed: "bg-emerald-100 text-emerald-950",
   Dropped: "bg-stone-200 text-stone-600",
   Active: "bg-emerald-100 text-emerald-950",
+  Completed: "bg-teal-100 text-teal-950",
+  Discontinued: "bg-rose-100 text-rose-900",
   Inactive: "bg-stone-200 text-stone-600",
+  Teaching: "bg-sky-100 text-sky-900",
+  "Non-teaching": "bg-slate-200 text-slate-800",
   payment: "bg-emerald-100 text-emerald-950",
   refund: "bg-rose-100 text-rose-900",
 };

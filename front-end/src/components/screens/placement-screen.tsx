@@ -26,7 +26,7 @@ import { MOCK_RANKS, PLACEMENT_STATUSES } from "@/lib/types";
 export function PlacementScreen({ id }: { id: string }) {
   const data = useAcademy();
   const placement = data.placements.find((item) => item.id === id);
-  const level = data.user ? accessLevel(data.user.role, "placements") : "none";
+  const level = data.user ? accessLevel(data.user.role, "placements", data.permissions) : "none";
   const admission = data.admissions.find((item) => item.id === placement?.admissionId);
   const student = admission
     ? studentForAdmission(data, admission)

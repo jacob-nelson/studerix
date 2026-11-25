@@ -2,6 +2,7 @@ import type {
   AcademyData,
   Admission,
   EnquiryStatus,
+  FeePart,
   LedgerEntry,
 } from "@/lib/types";
 
@@ -18,6 +19,15 @@ export function paidAmount(entries: LedgerEntry[]) {
 
 export function balanceAmount(agreedFee: number, entries: LedgerEntry[]) {
   return agreedFee - paidAmount(entries);
+}
+
+export function scheduleAmounts(fee: number, parts: FeePart[]) {
+  let used = 0;
+  return parts.map((part, index) => {
+    const amount = index === parts.length - 1 ? fee - used : Math.round((fee * part.percent) / 100);
+    used += amount;
+    return { ...part, amount };
+  });
 }
 
 export function nextId(prefix: string, ids: string[]) {

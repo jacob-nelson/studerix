@@ -18,18 +18,19 @@ import { Label } from "@/components/ui/label";
 import { accessLevel } from "@/lib/permissions";
 import { staffSchema, type StaffInput } from "@/lib/schemas";
 import { useAcademy } from "@/lib/store";
-import { ROLES } from "@/lib/types";
+import { ROLES, STAFF_KINDS } from "@/lib/types";
 
 export function StaffFormScreen() {
   const data = useAcademy();
   const router = useRouter();
-  const level = data.user ? accessLevel(data.user.role, "staff") : "none";
+  const level = data.user ? accessLevel(data.user.role, "staff", data.permissions) : "none";
   const form = useForm<StaffInput>({
     resolver: zodResolver(staffSchema),
     defaultValues: {
       name: "",
       email: "",
-      role: "Admissions",
+      kind: "Teaching",
+      role: "Faculty",
       password: "",
       active: true,
     },
@@ -40,9 +41,9 @@ export function StaffFormScreen() {
   return (
     <div className="mx-auto grid w-full max-w-xl gap-6">
       <PageHeader
-        eyebrow="Access"
-        title="New staff login"
-        description="They can sign in with this password until the tab is refreshed."
+        eyebrow="People"
+        title="Onboard staff"
+        description="Teaching staff take classes. Non-teaching staff support the batch or the desk. They can sign in with this password until the tab is refreshed."
         actions={
           <Button asChild variant="outline">
             <Link href="/staff">Back to staff</Link>
@@ -60,7 +61,7 @@ export function StaffFormScreen() {
                 toast.error(result.message);
                 return;
               }
-              toast.success(`${values.name} can sign in now`);
+              toast.success(`${values.name} onboarded as ${values.kind.toLowerCase()} staff`);
               router.push("/staff");
             })}
           >
@@ -70,7 +71,16 @@ export function StaffFormScreen() {
             <Field label="Email" htmlFor="email" error={form.formState.errors.email?.message}>
               <Input id="email" type="email" {...form.register("email")} />
             </Field>
-            <Field label="Role" error={form.formState.errors.role?.message}>
+            <Field label="Type" error={form.formState.errors.kind?.message}>
+              <Controller
+                control={form.control}
+                name="kind"
+                render={({ field }) => (
+                  <OptionSelect value={field.value} onChange={field.onChange} options={STAFF_KINDS} />
+                )}
+              />
+            </Field>
+            <Field label="Desk role" error={form.formState.errors.role?.message}>
               <Controller
                 control={form.control}
                 name="role"
@@ -98,7 +108,7 @@ export function StaffFormScreen() {
             />
             <div className="flex justify-end">
               <Button type="submit" className="w-fit">
-                Create login
+                Onboard
               </Button>
             </div>
           </form>

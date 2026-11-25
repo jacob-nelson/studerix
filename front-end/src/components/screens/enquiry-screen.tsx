@@ -30,7 +30,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { isoDate, suggestedBatch, suggestedFee } from "@/lib/dates";
-import { formatDate, formatPhone } from "@/lib/format";
+import { formatDate, formatInr, formatPhone } from "@/lib/format";
+import { scheduleAmounts } from "@/lib/records";
 import { accessLevel } from "@/lib/permissions";
 import { followUpSchema, joinSchema, type FollowUpInput, type JoinInput } from "@/lib/schemas";
 import { useAcademy } from "@/lib/store";
@@ -40,7 +41,7 @@ export function EnquiryScreen({ id }: { id: string }) {
   const data = useAcademy();
   const router = useRouter();
   const enquiry = data.enquiries.find((item) => item.id === id);
-  const level = data.user ? accessLevel(data.user.role, "enquiries") : "none";
+  const level = data.user ? accessLevel(data.user.role, "enquiries", data.permissions) : "none";
   const [open, setOpen] = useState(false);
 
   if (level === "none") return <AccessDenied />;
@@ -271,17 +272,27 @@ function JoinDialog({
   course: string;
   onConfirm: (values: JoinInput) => void;
 }) {
+  const data = useAcademy();
+  const offering = data.courses.find((item) => item.name === course);
+  const matching = offering
+    ? data.batches.filter((batch) => batch.courseId === offering.id)
+    : data.batches;
+  const batchOptions = matching.length ? matching.map((batch) => batch.name) : offering ? [] : [...BATCHES];
   const form = useForm<JoinInput>({
     resolver: zodResolver(joinSchema),
     defaultValues: {
       joinedOn: isoDate(new Date()),
-      batch: suggestedBatch(course),
-      agreedFee: suggestedFee(course),
+      batch: batchOptions.find((name) => name === suggestedBatch(course)) ?? batchOptions[0] ?? "",
+      feePlanId: offering?.feePlans[0]?.id ?? "",
+      agreedFee: offering?.fee ?? suggestedFee(course),
       referralBonus: 0,
       referrerName: "",
     },
   });
   const errors = form.formState.errors;
+  const plans = offering?.feePlans ?? [];
+  const plan = plans.find((item) => item.id === form.watch("feePlanId"));
+  const agreedFee = form.watch("agreedFee");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -318,7 +329,38 @@ function JoinDialog({
               control={form.control}
               name="batch"
               render={({ field }) => (
-                <OptionSelect value={field.value} onChange={field.onChange} options={BATCHES} />
+                <OptionSelect
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={batchOptions}
+                  placeholder={batchOptions.length ? "Batch" : "Add a batch on the course first"}
+                  disabled={batchOptions.length === 0}
+                />
+              )}
+            />
+          </Field>
+          <Field
+            label="Fee plan"
+            error={errors.feePlanId?.message}
+            hint={
+              plan && Number.isFinite(agreedFee)
+                ? scheduleAmounts(agreedFee, plan.parts)
+                    .map((part) => `${part.label} ${part.percent}% (${formatInr(part.amount)})`)
+                    .join(" · ")
+                : undefined
+            }
+          >
+            <Controller
+              control={form.control}
+              name="feePlanId"
+              render={({ field }) => (
+                <OptionSelect
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={plans.map((item) => ({ value: item.id, label: item.name }))}
+                  placeholder={plans.length ? "Fee plan" : "Add a fee plan on the course first"}
+                  disabled={plans.length === 0}
+                />
               )}
             />
           </Field>

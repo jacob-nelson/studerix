@@ -15,8 +15,8 @@ import { useAcademy } from "@/lib/store";
 import type { Expense } from "@/lib/types";
 
 export function ExpensesScreen() {
-  const { expenses, user } = useAcademy();
-  const level = user ? accessLevel(user.role, "expenses") : "none";
+  const { expenses, user, permissions } = useAcademy();
+  const level = user ? accessLevel(user.role, "expenses", permissions) : "none";
   const [period, setPeriod] = useState<Period>("month");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");

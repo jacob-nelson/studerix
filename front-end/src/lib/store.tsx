@@ -11,29 +11,60 @@ import {
 
 import { nextId, paymentIds } from "@/lib/records";
 import type {
+  BatchInput,
   ConsultancyInput,
+  CourseInput,
+  DirectAdmissionInput,
+  DiscontinueInput,
   EnquiryInput,
   ExpenseInput,
+  FeePlanInput,
   FollowUpInput,
   JoinInput,
   LedgerInput,
   PlacementInput,
+  ScheduleInput,
   StaffInput,
+  SyllabusInput,
 } from "@/lib/schemas";
 import { createSeed } from "@/lib/seed";
 import type {
   AcademyData,
   Admission,
+  AdmissionStatus,
   AuditEvent,
+  Batch,
+  ClassSlot,
   ConsultancyCandidate,
+  CourseOffering,
   Enquiry,
   Expense,
+  FeePart,
+  FeePlan,
   InternalPlacement,
+  AccessLevel,
   LedgerEntry,
+  ModuleKey,
+  Role,
   StaffUser,
+  SyllabusTopic,
 } from "@/lib/types";
 
 const SESSION_KEY = "tm.session";
+
+function feeAgreement(
+  course: CourseOffering,
+  planId: string,
+): { ok: true; feePlanName: string; feeSchedule: FeePart[] } | { ok: false; message: string } {
+  if (course.feePlans.length === 0) return { ok: true, feePlanName: "", feeSchedule: [] };
+  const plan = course.feePlans.find((item) => item.id === planId);
+  if (!plan) return { ok: false, message: "Choose a fee plan for this course." };
+  return {
+    ok: true,
+    feePlanName: plan.name,
+    feeSchedule: plan.parts.map((part) => ({ label: part.label, percent: part.percent })),
+  };
+}
 
 interface AcademyState extends AcademyData {
   sessionUserId: string | null;
@@ -69,7 +100,35 @@ type Action =
       audit: AuditEvent;
     }
   | { type: "add-staff"; user: StaffUser; audit: AuditEvent }
-  | { type: "set-staff-active"; userId: string; active: boolean; audit: AuditEvent };
+  | { type: "set-staff-active"; userId: string; active: boolean; audit: AuditEvent }
+  | { type: "set-permission"; role: Role; module: ModuleKey; level: AccessLevel; audit: AuditEvent }
+  | { type: "set-export"; role: Role; allowed: boolean; audit: AuditEvent }
+  | {
+      type: "save-permissions";
+      permissions: Record<Role, Record<ModuleKey, AccessLevel>>;
+      exportRoles: Role[];
+      audit: AuditEvent;
+    }
+  | { type: "assign-batch-staff"; batchId: string; staffId: string; audit: AuditEvent }
+  | { type: "remove-batch-staff"; batchId: string; staffId: string; audit: AuditEvent }
+  | { type: "add-course"; course: CourseOffering; audit: AuditEvent }
+  | { type: "update-course"; course: CourseOffering; audit: AuditEvent }
+  | { type: "add-syllabus"; courseId: string; topic: SyllabusTopic; audit: AuditEvent }
+  | { type: "remove-syllabus"; courseId: string; topicId: string; audit: AuditEvent }
+  | { type: "add-slot"; batchId: string; slot: ClassSlot; audit: AuditEvent }
+  | { type: "remove-slot"; batchId: string; slotId: string; audit: AuditEvent }
+  | { type: "add-fee-plan"; courseId: string; plan: FeePlan; audit: AuditEvent }
+  | { type: "remove-fee-plan"; courseId: string; planId: string; audit: AuditEvent }
+  | { type: "add-batch"; batch: Batch; audit: AuditEvent }
+  | {
+      type: "admit-student";
+      enquiry: Enquiry;
+      admission: Admission;
+      placement?: InternalPlacement;
+      audit: AuditEvent;
+    }
+  | { type: "set-admission-status"; admission: Admission; audit: AuditEvent }
+  | { type: "assign-batch"; admission: Admission; enquiry?: Enquiry; audit: AuditEvent };
 
 function reducer(state: AcademyState, action: Action): AcademyState {
   switch (action.type) {
@@ -175,6 +234,161 @@ function reducer(state: AcademyState, action: Action): AcademyState {
         ),
         audit: [action.audit, ...state.audit],
       };
+    case "set-permission":
+      return {
+        ...state,
+        permissions: {
+          ...state.permissions,
+          [action.role]: { ...state.permissions[action.role], [action.module]: action.level },
+        },
+        audit: [action.audit, ...state.audit],
+      };
+    case "set-export":
+      return {
+        ...state,
+        exportRoles: action.allowed
+          ? state.exportRoles.includes(action.role)
+            ? state.exportRoles
+            : [...state.exportRoles, action.role]
+          : state.exportRoles.filter((role) => role !== action.role),
+        audit: [action.audit, ...state.audit],
+      };
+    case "save-permissions":
+      return {
+        ...state,
+        permissions: action.permissions,
+        exportRoles: action.exportRoles,
+        audit: [action.audit, ...state.audit],
+      };
+    case "assign-batch-staff":
+      return {
+        ...state,
+        batches: state.batches.map((batch) =>
+          batch.id === action.batchId
+            ? { ...batch, staffIds: [...batch.staffIds, action.staffId] }
+            : batch,
+        ),
+        audit: [action.audit, ...state.audit],
+      };
+    case "remove-batch-staff":
+      return {
+        ...state,
+        batches: state.batches.map((batch) =>
+          batch.id === action.batchId
+            ? { ...batch, staffIds: batch.staffIds.filter((id) => id !== action.staffId) }
+            : batch,
+        ),
+        audit: [action.audit, ...state.audit],
+      };
+    case "add-course":
+      return {
+        ...state,
+        courses: [...state.courses, action.course],
+        audit: [action.audit, ...state.audit],
+      };
+    case "update-course":
+      return {
+        ...state,
+        courses: state.courses.map((course) =>
+          course.id === action.course.id ? action.course : course,
+        ),
+        audit: [action.audit, ...state.audit],
+      };
+    case "add-syllabus":
+      return {
+        ...state,
+        courses: state.courses.map((course) =>
+          course.id === action.courseId
+            ? { ...course, syllabus: [...course.syllabus, action.topic] }
+            : course,
+        ),
+        audit: [action.audit, ...state.audit],
+      };
+    case "remove-syllabus":
+      return {
+        ...state,
+        courses: state.courses.map((course) =>
+          course.id === action.courseId
+            ? { ...course, syllabus: course.syllabus.filter((topic) => topic.id !== action.topicId) }
+            : course,
+        ),
+        audit: [action.audit, ...state.audit],
+      };
+    case "add-slot":
+      return {
+        ...state,
+        batches: state.batches.map((batch) =>
+          batch.id === action.batchId ? { ...batch, schedule: [...batch.schedule, action.slot] } : batch,
+        ),
+        audit: [action.audit, ...state.audit],
+      };
+    case "remove-slot":
+      return {
+        ...state,
+        batches: state.batches.map((batch) =>
+          batch.id === action.batchId
+            ? { ...batch, schedule: batch.schedule.filter((slot) => slot.id !== action.slotId) }
+            : batch,
+        ),
+        audit: [action.audit, ...state.audit],
+      };
+    case "add-fee-plan":
+      return {
+        ...state,
+        courses: state.courses.map((course) =>
+          course.id === action.courseId
+            ? { ...course, feePlans: [...course.feePlans, action.plan] }
+            : course,
+        ),
+        audit: [action.audit, ...state.audit],
+      };
+    case "remove-fee-plan":
+      return {
+        ...state,
+        courses: state.courses.map((course) =>
+          course.id === action.courseId
+            ? { ...course, feePlans: course.feePlans.filter((plan) => plan.id !== action.planId) }
+            : course,
+        ),
+        audit: [action.audit, ...state.audit],
+      };
+    case "add-batch":
+      return {
+        ...state,
+        batches: [...state.batches, action.batch],
+        audit: [action.audit, ...state.audit],
+      };
+    case "admit-student":
+      return {
+        ...state,
+        enquiries: [action.enquiry, ...state.enquiries],
+        admissions: [action.admission, ...state.admissions],
+        placements: action.placement
+          ? [action.placement, ...state.placements]
+          : state.placements,
+        audit: [action.audit, ...state.audit],
+      };
+    case "set-admission-status":
+      return {
+        ...state,
+        admissions: state.admissions.map((admission) =>
+          admission.id === action.admission.id ? action.admission : admission,
+        ),
+        audit: [action.audit, ...state.audit],
+      };
+    case "assign-batch":
+      return {
+        ...state,
+        admissions: state.admissions.map((admission) =>
+          admission.id === action.admission.id ? action.admission : admission,
+        ),
+        enquiries: action.enquiry
+          ? state.enquiries.map((enquiry) =>
+              enquiry.id === action.enquiry!.id ? action.enquiry! : enquiry,
+            )
+          : state.enquiries,
+        audit: [action.audit, ...state.audit],
+      };
     default:
       return state;
   }
@@ -246,6 +460,36 @@ interface AcademyContextValue extends AcademyState {
   setStaffActive: (
     userId: string,
     active: boolean,
+    actor: string,
+  ) => Success | Failure;
+  setPermission: (role: Role, module: ModuleKey, level: AccessLevel, actor: string) => Success | Failure;
+  setExport: (role: Role, allowed: boolean, actor: string) => Success | Failure;
+  saveRolePermissions: (
+    permissions: Record<Role, Record<ModuleKey, AccessLevel>>,
+    exportRoles: Role[],
+    actor: string,
+  ) => Success | Failure;
+  addCourse: (input: CourseInput, actor: string) => Success<{ id: string }> | Failure;
+  updateCourse: (course: CourseOffering, input: CourseInput, actor: string) => Success | Failure;
+  addSyllabusTopic: (courseId: string, input: SyllabusInput, actor: string) => Success | Failure;
+  removeSyllabusTopic: (courseId: string, topicId: string, actor: string) => void;
+  addClassSlot: (batchId: string, input: ScheduleInput, actor: string) => Success | Failure;
+  removeClassSlot: (batchId: string, slotId: string, actor: string) => void;
+  addFeePlan: (courseId: string, input: FeePlanInput, actor: string) => Success | Failure;
+  removeFeePlan: (courseId: string, planId: string, actor: string) => void;
+  addBatch: (courseId: string, input: BatchInput, actor: string) => Success<{ id: string }> | Failure;
+  assignBatchStaff: (batchId: string, staffId: string, actor: string) => Success | Failure;
+  removeBatchStaff: (batchId: string, staffId: string, actor: string) => Success | Failure;
+  addAdmission: (input: DirectAdmissionInput, actor: string) => Success<{ admissionId: string }> | Failure;
+  setAdmissionStatus: (
+    admissionId: string,
+    status: AdmissionStatus,
+    input: DiscontinueInput | null,
+    actor: string,
+  ) => Success | Failure;
+  assignAdmissionBatch: (
+    admissionId: string,
+    batchId: string,
     actor: string,
   ) => Success | Failure;
 }
@@ -381,6 +625,15 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
         if (enquiry.status === "Joined") {
           return { ok: false, message: "This enquiry is already marked Joined." };
         }
+        const offering = state.courses.find((course) => course.name === enquiry.course);
+        const batchRecord = state.batches.find((batch) => batch.name === input.batch);
+        if (offering && (!batchRecord || batchRecord.courseId !== offering.id)) {
+          return { ok: false, message: "Choose a batch that belongs to this course." };
+        }
+        const agreement = offering
+          ? feeAgreement(offering, input.feePlanId)
+          : { ok: true as const, feePlanName: "", feeSchedule: [] as FeePart[] };
+        if (!agreement.ok) return agreement;
         const admission: Admission = {
           id: nextId(
             "ADM",
@@ -388,16 +641,24 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
           ),
           enquiryId: enquiry.id,
           batch: input.batch,
+          batchId: batchRecord?.id ?? "",
+          status: "Active",
+          discontinuedOn: "",
+          discontinueReason: "",
           source: enquiry.source,
           referralBonus: input.referralBonus,
           referrerName: input.referrerName,
           agreedFee: input.agreedFee,
           joinedOn: input.joinedOn,
+          feePlanName: agreement.feePlanName,
+          feeSchedule: agreement.feeSchedule,
           instalments: [],
         };
-        const placement: InternalPlacement | undefined =
-          enquiry.course === "Software Testing"
-            ? {
+        const opensPlacement = offering
+          ? offering.opensPlacement
+          : enquiry.course === "Software Testing";
+        const placement: InternalPlacement | undefined = opensPlacement
+          ? {
                 id: nextId(
                   "PLC",
                   state.placements.map((item) => item.id),
@@ -566,8 +827,8 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
             state,
             actor,
             "Access",
-            "Staff login added",
-            `${staffUser.name} added as ${staffUser.role}.`,
+            "Staff onboarded",
+            `${staffUser.name} onboarded as ${staffUser.kind.toLowerCase()} staff.`,
           ),
         });
         return { ok: true, email: staffUser.email };
@@ -594,6 +855,410 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
             "Access",
             active ? "Login restored" : "Login deactivated",
             `${target.name} is now ${active ? "active" : "inactive"}.`,
+          ),
+        });
+        return { ok: true };
+      },
+      setPermission: (role, module, level, actor) => {
+        if (user && user.role === role && module === "staff" && level !== "write") {
+          return { ok: false, message: "Keep edit access to staff on the role you are signed in with." };
+        }
+        if (state.permissions[role][module] === level) return { ok: true };
+        const levelLabel = level === "write" ? "edit" : level === "read" ? "view" : "no access";
+        dispatch({
+          type: "set-permission",
+          role,
+          module,
+          level,
+          audit: createAudit(
+            state,
+            actor,
+            "Access",
+            "Permission changed",
+            `${role} now has ${levelLabel} on ${module}.`,
+          ),
+        });
+        return { ok: true };
+      },
+      setExport: (role, allowed, actor) => {
+        if (state.exportRoles.includes(role) === allowed) return { ok: true };
+        dispatch({
+          type: "set-export",
+          role,
+          allowed,
+          audit: createAudit(
+            state,
+            actor,
+            "Access",
+            "Export permission changed",
+            `${role} ${allowed ? "can" : "cannot"} export reports.`,
+          ),
+        });
+        return { ok: true };
+      },
+      saveRolePermissions: (permissions, exportRoles, actor) => {
+        const nextPermissions = Object.fromEntries(
+          (Object.keys(permissions) as Role[]).map((role) => [role, { ...permissions[role] }]),
+        ) as Record<Role, Record<ModuleKey, AccessLevel>>;
+        (Object.keys(nextPermissions.Administrator) as ModuleKey[]).forEach((module) => {
+          nextPermissions.Administrator[module] = "write";
+        });
+        if (user && nextPermissions[user.role].staff !== "write") {
+          return { ok: false, message: "Keep edit access to staff on the role you are signed in with." };
+        }
+        const nextExport: Role[] = exportRoles.includes("Administrator")
+          ? [...exportRoles]
+          : ["Administrator", ...exportRoles];
+        dispatch({
+          type: "save-permissions",
+          permissions: nextPermissions,
+          exportRoles: nextExport,
+          audit: createAudit(state, actor, "Access", "Permissions saved", "Desk role permissions were updated."),
+        });
+        return { ok: true };
+      },
+      addCourse: (input, actor) => {
+        const exists = state.courses.some(
+          (course) => course.name.toLowerCase() === input.name.toLowerCase(),
+        );
+        if (exists) return { ok: false, message: "A course with that name already exists." };
+        const course: CourseOffering = {
+          ...input,
+          id: nextId(
+            "CRS",
+            state.courses.map((item) => item.id),
+          ),
+          syllabus: [],
+          feePlans: [],
+        };
+        dispatch({
+          type: "add-course",
+          course,
+          audit: createAudit(state, actor, "Courses", "Course added", `${course.name} added to the catalogue.`),
+        });
+        return { ok: true, id: course.id };
+      },
+      updateCourse: (course, input, actor) => {
+        const clash = state.courses.some(
+          (item) => item.id !== course.id && item.name.toLowerCase() === input.name.toLowerCase(),
+        );
+        if (clash) return { ok: false, message: "Another course already uses that name." };
+        dispatch({
+          type: "update-course",
+          course: { ...course, ...input },
+          audit: createAudit(
+            state,
+            actor,
+            "Courses",
+            "Course updated",
+            `${input.name} is ${input.durationWeeks} weeks at ₹${input.fee.toLocaleString("en-IN")}.`,
+          ),
+        });
+        return { ok: true };
+      },
+      addSyllabusTopic: (courseId, input, actor) => {
+        const course = state.courses.find((item) => item.id === courseId);
+        if (!course) return { ok: false, message: "That course is not in the catalogue." };
+        const topic: SyllabusTopic = {
+          ...input,
+          id: nextId(
+            "SYL",
+            state.courses.flatMap((item) => item.syllabus.map((topic) => topic.id)),
+          ),
+        };
+        dispatch({
+          type: "add-syllabus",
+          courseId,
+          topic,
+          audit: createAudit(state, actor, "Courses", "Syllabus updated", `${topic.title} added to ${course.name}.`),
+        });
+        return { ok: true };
+      },
+      removeSyllabusTopic: (courseId, topicId, actor) => {
+        const course = state.courses.find((item) => item.id === courseId);
+        const topic = course?.syllabus.find((item) => item.id === topicId);
+        dispatch({
+          type: "remove-syllabus",
+          courseId,
+          topicId,
+          audit: createAudit(
+            state,
+            actor,
+            "Courses",
+            "Syllabus updated",
+            `${topic?.title ?? "A topic"} removed from ${course?.name ?? "a course"}.`,
+          ),
+        });
+      },
+      addClassSlot: (batchId, input, actor) => {
+        const batch = state.batches.find((item) => item.id === batchId);
+        if (!batch) return { ok: false, message: "That batch is not on the catalogue." };
+        const slot: ClassSlot = {
+          ...input,
+          id: nextId(
+            "SCH",
+            state.batches.flatMap((item) => item.schedule.map((slot) => slot.id)),
+          ),
+        };
+        dispatch({
+          type: "add-slot",
+          batchId,
+          slot,
+          audit: createAudit(
+            state,
+            actor,
+            "Courses",
+            "Schedule updated",
+            `${slot.day} ${slot.start} added to ${batch.name}.`,
+          ),
+        });
+        return { ok: true };
+      },
+      removeClassSlot: (batchId, slotId, actor) => {
+        const batch = state.batches.find((item) => item.id === batchId);
+        dispatch({
+          type: "remove-slot",
+          batchId,
+          slotId,
+          audit: createAudit(
+            state,
+            actor,
+            "Courses",
+            "Schedule updated",
+            `A class was removed from ${batch?.name ?? "a batch"}.`,
+          ),
+        });
+      },
+      addFeePlan: (courseId, input, actor) => {
+        const course = state.courses.find((item) => item.id === courseId);
+        if (!course) return { ok: false, message: "That course is not in the catalogue." };
+        const clash = course.feePlans.some((plan) => plan.name.toLowerCase() === input.name.toLowerCase());
+        if (clash) return { ok: false, message: "This course already has a plan with that name." };
+        const plan: FeePlan = {
+          id: nextId(
+            "PLN",
+            state.courses.flatMap((item) => item.feePlans.map((feePlan) => feePlan.id)),
+          ),
+          name: input.name,
+          parts: input.parts.map((part) => ({ label: part.label, percent: part.percent })),
+        };
+        dispatch({
+          type: "add-fee-plan",
+          courseId,
+          plan,
+          audit: createAudit(
+            state,
+            actor,
+            "Courses",
+            "Fee plan added",
+            `${plan.name} added to ${course.name}.`,
+          ),
+        });
+        return { ok: true };
+      },
+      removeFeePlan: (courseId, planId, actor) => {
+        const course = state.courses.find((item) => item.id === courseId);
+        const plan = course?.feePlans.find((item) => item.id === planId);
+        dispatch({
+          type: "remove-fee-plan",
+          courseId,
+          planId,
+          audit: createAudit(
+            state,
+            actor,
+            "Courses",
+            "Fee plan removed",
+            `${plan?.name ?? "A fee plan"} removed from ${course?.name ?? "a course"}.`,
+          ),
+        });
+      },
+      addBatch: (courseId, input, actor) => {
+        const course = state.courses.find((item) => item.id === courseId);
+        if (!course) return { ok: false, message: "That course is not in the catalogue." };
+        const clash = state.batches.some((batch) => batch.name.toLowerCase() === input.name.toLowerCase());
+        if (clash) return { ok: false, message: "A batch with that name already exists." };
+        const batch: Batch = {
+          ...input,
+          id: nextId(
+            "BAT",
+            state.batches.map((item) => item.id),
+          ),
+          courseId,
+          schedule: [],
+          staffIds: [],
+        };
+        dispatch({
+          type: "add-batch",
+          batch,
+          audit: createAudit(state, actor, "Courses", "Batch added", `${batch.name} attached to ${course.name}.`),
+        });
+        return { ok: true, id: batch.id };
+      },
+      assignBatchStaff: (batchId, staffId, actor) => {
+        const batch = state.batches.find((item) => item.id === batchId);
+        const person = state.staff.find((item) => item.id === staffId);
+        if (!batch) return { ok: false, message: "That batch is not on the catalogue." };
+        if (!person) return { ok: false, message: "That staff member was not found." };
+        if (!person.active) return { ok: false, message: "Activate this staff member before assigning them." };
+        if (batch.staffIds.includes(person.id)) {
+          return { ok: false, message: `${person.name} is already on this batch.` };
+        }
+        dispatch({
+          type: "assign-batch-staff",
+          batchId,
+          staffId: person.id,
+          audit: createAudit(
+            state,
+            actor,
+            "Courses",
+            "Staff assigned",
+            `${person.name} assigned to ${batch.name}.`,
+          ),
+        });
+        return { ok: true };
+      },
+      removeBatchStaff: (batchId, staffId, actor) => {
+        const batch = state.batches.find((item) => item.id === batchId);
+        const person = state.staff.find((item) => item.id === staffId);
+        if (!batch) return { ok: false, message: "That batch is not on the catalogue." };
+        if (!person || !batch.staffIds.includes(person.id)) {
+          return { ok: false, message: "That staff member is not on this batch." };
+        }
+        dispatch({
+          type: "remove-batch-staff",
+          batchId,
+          staffId: person.id,
+          audit: createAudit(
+            state,
+            actor,
+            "Courses",
+            "Staff removed",
+            `${person.name} removed from ${batch.name}.`,
+          ),
+        });
+        return { ok: true };
+      },
+      addAdmission: (input, actor) => {
+        const course = state.courses.find((item) => item.id === input.courseId);
+        const batch = state.batches.find((item) => item.id === input.batchId);
+        if (!course || !batch || batch.courseId !== course.id) {
+          return { ok: false, message: "Choose a batch that belongs to the course." };
+        }
+        const agreement = feeAgreement(course, input.feePlanId);
+        if (!agreement.ok) return agreement;
+        const enquiry: Enquiry = {
+          id: nextId(
+            "ENQ",
+            state.enquiries.map((item) => item.id),
+          ),
+          enquiryDate: input.joinedOn,
+          studentName: input.studentName,
+          contact: input.contact,
+          email: input.email,
+          groupAdded: false,
+          source: input.source,
+          course: course.name,
+          status: "Joined",
+          remarks: "Admitted from the admissions desk.",
+          followUpDate: "",
+          nextActionDate: "",
+          nextAction: "",
+        };
+        const admission: Admission = {
+          id: nextId(
+            "ADM",
+            state.admissions.map((item) => item.id),
+          ),
+          enquiryId: enquiry.id,
+          batch: batch.name,
+          batchId: batch.id,
+          status: "Active",
+          discontinuedOn: "",
+          discontinueReason: "",
+          source: input.source,
+          referralBonus: input.referralBonus,
+          referrerName: input.referrerName,
+          agreedFee: input.agreedFee,
+          joinedOn: input.joinedOn,
+          feePlanName: agreement.feePlanName,
+          feeSchedule: agreement.feeSchedule,
+          instalments: [],
+        };
+        const placement: InternalPlacement | undefined = course.opensPlacement
+          ? {
+              id: nextId(
+                "PLC",
+                state.placements.map((item) => item.id),
+              ),
+              admissionId: admission.id,
+              mockRank: "Unranked",
+              company: "",
+              salary: "",
+              status: "Eligible",
+              updatedOn: input.joinedOn,
+              notes: "Opened automatically because this student joined a placement-track course.",
+            }
+          : undefined;
+        dispatch({
+          type: "admit-student",
+          enquiry,
+          admission,
+          placement,
+          audit: createAudit(
+            state,
+            actor,
+            "Admissions",
+            "Admission added",
+            placement
+              ? `${input.studentName} joined ${batch.name}. Internal placement ${placement.id} opened.`
+              : `${input.studentName} joined ${batch.name}.`,
+          ),
+        });
+        return { ok: true, admissionId: admission.id };
+      },
+      setAdmissionStatus: (admissionId, status, input, actor) => {
+        const admission = state.admissions.find((item) => item.id === admissionId);
+        if (!admission) return { ok: false, message: "That admission is not in this prototype." };
+        const student = state.enquiries.find((item) => item.id === admission.enquiryId);
+        const next: Admission = {
+          ...admission,
+          status,
+          discontinuedOn: status === "Discontinued" ? input?.discontinuedOn ?? "" : "",
+          discontinueReason: status === "Discontinued" ? input?.discontinueReason ?? "" : "",
+        };
+        dispatch({
+          type: "set-admission-status",
+          admission: next,
+          audit: createAudit(
+            state,
+            actor,
+            "Admissions",
+            status === "Discontinued" ? "Admission discontinued" : `Admission marked ${status.toLowerCase()}`,
+            `${student?.studentName ?? "Student"} is now ${status.toLowerCase()}${
+              next.discontinueReason ? `: ${next.discontinueReason}` : ""
+            }.`,
+          ),
+        });
+        return { ok: true };
+      },
+      assignAdmissionBatch: (admissionId, batchId, actor) => {
+        const admission = state.admissions.find((item) => item.id === admissionId);
+        const batch = state.batches.find((item) => item.id === batchId);
+        if (!admission || !batch) return { ok: false, message: "Choose a batch that is still on the catalogue." };
+        const course = state.courses.find((item) => item.id === batch.courseId);
+        const enquiry = state.enquiries.find((item) => item.id === admission.enquiryId);
+        const nextAdmission: Admission = { ...admission, batchId: batch.id, batch: batch.name };
+        const nextEnquiry = enquiry && course ? { ...enquiry, course: course.name } : undefined;
+        dispatch({
+          type: "assign-batch",
+          admission: nextAdmission,
+          enquiry: nextEnquiry,
+          audit: createAudit(
+            state,
+            actor,
+            "Admissions",
+            "Batch changed",
+            `${enquiry?.studentName ?? "Student"} moved to ${batch.name}.`,
           ),
         });
         return { ok: true };

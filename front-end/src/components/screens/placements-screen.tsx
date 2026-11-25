@@ -27,7 +27,7 @@ interface PlacementRow {
 export function PlacementsScreen() {
   const data = useAcademy();
   const router = useRouter();
-  const level = data.user ? accessLevel(data.user.role, "placements") : "none";
+  const level = data.user ? accessLevel(data.user.role, "placements", data.permissions) : "none";
   const rows = useMemo<PlacementRow[]>(
     () =>
       data.placements.map((placement) => {

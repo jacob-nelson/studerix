@@ -30,7 +30,7 @@ export function OptionSelect({
   className?: string;
 }) {
   return (
-    <Select value={value} onValueChange={onChange} disabled={disabled}>
+    <Select value={value || undefined} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger id={id} className={cn("w-full bg-card", className)} aria-invalid={invalid}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
