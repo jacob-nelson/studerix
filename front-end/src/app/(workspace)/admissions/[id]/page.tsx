@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { AdmissionScreen } from "@/components/screens/admission-screen";
 
-export const metadata: Metadata = { title: "Fee record" };
+import { AdmissionStudent } from "@/components/screens/admission-screen";
+
+export const metadata: Metadata = { title: "Admission" };
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <AdmissionScreen id={id} />;
+  return <AdmissionStudent id={id} />;
 }

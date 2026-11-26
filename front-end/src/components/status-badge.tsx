@@ -27,6 +27,9 @@ const TONES: Record<string, string> = {
   "Non-teaching": "bg-slate-200 text-slate-800",
   payment: "bg-emerald-100 text-emerald-950",
   refund: "bg-rose-100 text-rose-900",
+  Present: "bg-emerald-100 text-emerald-950",
+  Absent: "bg-rose-100 text-rose-900",
+  Late: "bg-amber-100 text-amber-950",
 };
 
 export function StatusBadge({ value }: { value: string }) {

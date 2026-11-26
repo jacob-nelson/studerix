@@ -80,6 +80,41 @@ export type Weekday = (typeof WEEKDAYS)[number];
 export const ADMISSION_STATUSES = ["Active", "Completed", "Discontinued"] as const;
 export type AdmissionStatus = (typeof ADMISSION_STATUSES)[number];
 
+export const ATTENDANCE_MARKS = ["Present", "Absent", "Late"] as const;
+export type AttendanceMark = (typeof ATTENDANCE_MARKS)[number];
+
+export const GENDERS = ["Female", "Male", "Other"] as const;
+export type Gender = (typeof GENDERS)[number];
+
+export const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"] as const;
+export type BloodGroup = (typeof BLOOD_GROUPS)[number];
+
+export interface StudentProfile {
+  photo: string;
+  dateOfBirth: string;
+  gender: Gender | "";
+  bloodGroup: BloodGroup | "";
+  qualification: string;
+  address: string;
+  parentName: string;
+  parentRelation: string;
+  parentContact: string;
+  emergencyName: string;
+  emergencyRelation: string;
+  emergencyContact: string;
+  otherContactName: string;
+  otherContact: string;
+  otherContactNote: string;
+}
+
+export interface AttendanceEntry {
+  id: string;
+  date: string;
+  batchId: string;
+  status: AttendanceMark;
+  note: string;
+}
+
 export type ModuleKey =
   | "dashboard"
   | "enquiries"
@@ -94,7 +129,7 @@ export type ModuleKey =
 
 export type AccessLevel = "none" | "read" | "write";
 
-export interface Enquiry {
+export interface Enquiry extends StudentProfile {
   id: string;
   enquiryDate: string;
   studentName: string;
@@ -171,6 +206,7 @@ export interface Admission {
   enquiryId: string;
   batch: string;
   batchId: string;
+  batchIds: string[];
   status: AdmissionStatus;
   discontinuedOn: string;
   discontinueReason: string;
@@ -182,6 +218,7 @@ export interface Admission {
   feePlanName: string;
   feeSchedule: FeePart[];
   instalments: LedgerEntry[];
+  attendance: AttendanceEntry[];
 }
 
 export interface Expense {

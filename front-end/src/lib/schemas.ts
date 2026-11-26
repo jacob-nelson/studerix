@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { isoDate } from "@/lib/dates";
+
 import {
   CONSULTANCY_STATUSES,
   ENQUIRY_STATUSES,
@@ -7,6 +9,9 @@ import {
   PAYMENT_MODES,
   PLACEMENT_STATUSES,
   ROLES,
+  ATTENDANCE_MARKS,
+  BLOOD_GROUPS,
+  GENDERS,
   SOURCES,
   STAFF_KINDS,
   WEEKDAYS,
@@ -16,6 +21,44 @@ const mobile = z
   .string()
   .trim()
   .regex(/^[6-9]\d{9}$/, "Enter a 10-digit mobile number");
+
+const optionalMobile = z
+  .string()
+  .trim()
+  .refine((value) => value === "" || /^[6-9]\d{9}$/.test(value), "Enter a 10-digit mobile number");
+
+const photo = z
+  .string()
+  .min(1, "Add a photo")
+  .refine((value) => value.startsWith("data:image/") && value.length < 2_000_000, "Use a photo under 1.5 MB");
+
+export const studentProfileSchema = z.object({
+  photo,
+  dateOfBirth: z
+    .string()
+    .min(1, "Enter the date of birth")
+    .refine((value) => value <= isoDate(new Date()), "Date of birth cannot be in the future"),
+  gender: z.enum(GENDERS, "Choose a gender"),
+  bloodGroup: z.enum(BLOOD_GROUPS, "Choose a blood group"),
+  qualification: z.string().trim().min(2, "Enter the highest qualification"),
+  address: z.string().trim().min(5, "Enter the address"),
+  parentName: z.string().trim().min(2, "Enter the parent or guardian name"),
+  parentRelation: z.string().trim().min(2, "Enter how they are related"),
+  parentContact: mobile,
+  emergencyName: z.string().trim().min(2, "Enter the emergency contact name"),
+  emergencyRelation: z.string().trim().min(2, "Enter how they are related"),
+  emergencyContact: mobile,
+  otherContactName: z.string().trim(),
+  otherContact: optionalMobile,
+  otherContactNote: z.string().trim().max(160, "Keep the note within 160 characters"),
+});
+
+export const attendanceSchema = z.object({
+  date: z.string().min(1, "Enter the date"),
+  batchId: z.string().min(1, "Choose a batch"),
+  status: z.enum(ATTENDANCE_MARKS, "Choose present, absent, or late"),
+  note: z.string().trim().max(160, "Keep the note within 160 characters"),
+});
 
 function rupee(message: string, allowZero = false) {
   const amount = z.number({ error: message });
@@ -201,7 +244,25 @@ export const directAdmissionSchema = z
     email: z.email("Enter a valid email"),
     source: z.enum(SOURCES, "Choose a source"),
     courseId: z.string().min(1, "Choose a course"),
-    batchId: z.string().min(1, "Choose a batch"),
+    batchIds: z.array(z.string()).min(1, "Choose at least one batch"),
+    photo,
+    dateOfBirth: z
+      .string()
+      .min(1, "Enter the date of birth")
+      .refine((value) => value <= isoDate(new Date()), "Date of birth cannot be in the future"),
+    gender: z.enum(GENDERS, "Choose a gender"),
+    bloodGroup: z.enum(BLOOD_GROUPS, "Choose a blood group"),
+    qualification: z.string().trim().min(2, "Enter the highest qualification"),
+    address: z.string().trim().min(5, "Enter the address"),
+    parentName: z.string().trim().min(2, "Enter the parent or guardian name"),
+    parentRelation: z.string().trim().min(2, "Enter how they are related"),
+    parentContact: mobile,
+    emergencyName: z.string().trim().min(2, "Enter the emergency contact name"),
+    emergencyRelation: z.string().trim().min(2, "Enter how they are related"),
+    emergencyContact: mobile,
+    otherContactName: z.string().trim(),
+    otherContact: optionalMobile,
+    otherContactNote: z.string().trim().max(160, "Keep the note within 160 characters"),
     feePlanId: z.string(),
     joinedOn: z.string().min(1, "Enter the joining date"),
     agreedFee: rupee("Enter the agreed course fee"),
@@ -235,4 +296,6 @@ export type FeePlanInput = z.infer<typeof feePlanSchema>;
 export type ScheduleInput = z.infer<typeof scheduleSchema>;
 export type BatchInput = z.infer<typeof batchSchema>;
 export type DirectAdmissionInput = z.infer<typeof directAdmissionSchema>;
+export type StudentProfileInput = z.infer<typeof studentProfileSchema>;
+export type AttendanceInput = z.infer<typeof attendanceSchema>;
 export type DiscontinueInput = z.infer<typeof discontinueSchema>;

@@ -1,5 +1,13 @@
 export type Period = "today" | "week" | "month" | "all" | "custom";
 
+export function yearsOfAge(iso: string, now = new Date()) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+  const [year, month, day] = iso.split("-").map(Number);
+  let age = now.getFullYear() - year;
+  if (now.getMonth() + 1 < month || (now.getMonth() + 1 === month && now.getDate() < day)) age -= 1;
+  return age >= 0 ? age : null;
+}
+
 export function isoDate(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");

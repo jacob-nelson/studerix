@@ -47,7 +47,7 @@ export function PlacementScreen({ id }: { id: string }) {
           <>
             <StatusBadge value={placement.status} />
             <Button asChild variant="outline">
-              <Link href={`/admissions/${placement.admissionId}`}>Fee record</Link>
+              <Link href={`/admissions/${placement.admissionId}`}>Admission</Link>
             </Button>
           </>
         }

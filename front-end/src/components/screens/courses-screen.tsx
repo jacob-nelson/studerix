@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/page-header";
 import { AccessDenied } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { formatInr } from "@/lib/format";
+import { onBatch } from "@/lib/records";
 import { accessLevel, canManageCourses } from "@/lib/permissions";
 import { useAcademy } from "@/lib/store";
 
@@ -35,10 +36,9 @@ export function CoursesScreen() {
         duration: `${course.durationWeeks} weeks`,
         fee: course.fee,
         batches: data.batches.filter((batch) => batch.courseId === course.id).length,
-        students: data.admissions.filter((admission) => {
-          const batch = data.batches.find((item) => item.id === admission.batchId);
-          return batch?.courseId === course.id;
-        }).length,
+        students: data.admissions.filter((admission) =>
+          data.batches.some((batch) => batch.courseId === course.id && onBatch(admission, batch.id)),
+        ).length,
       })),
     [data],
   );

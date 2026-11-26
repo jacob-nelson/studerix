@@ -109,7 +109,7 @@ export function AdmissionsScreen() {
             <div className="flex flex-wrap justify-end gap-2" onClick={(event) => event.stopPropagation()}>
               {fees ? (
                 <Button asChild size="sm" variant="outline" className="w-fit">
-                  <Link href={`/admissions/${row.id}#fees`}>Record fee</Link>
+                  <Link href={`/admissions/${row.id}/fees`}>Record fee</Link>
                 </Button>
               ) : null}
               <AdmissionStatusActions admission={row.admission} studentName={row.name} />
@@ -128,7 +128,7 @@ export function AdmissionsScreen() {
       <PageHeader
         eyebrow="Admissions"
         title="Fees and collections"
-        description="Admit a student onto a batch, discontinue or complete them, and record the fees they pay."
+        description="Admit a student onto one or more batches. Contacts, attendance and fees each have their own page."
         actions={
           manage ? (
             <Button asChild>

@@ -77,7 +77,7 @@ export function EnquiryScreen({ id }: { id: string }) {
           </CardHeader>
           <CardContent className="flex flex-wrap justify-end gap-2">
             <Button asChild>
-              <Link href={`/admissions/${admission.id}`}>Open fee record</Link>
+              <Link href={`/admissions/${admission.id}`}>Open admission</Link>
             </Button>
             {placement ? (
               <Button asChild variant="outline">

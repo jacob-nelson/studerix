@@ -4,7 +4,32 @@ import type {
   EnquiryStatus,
   FeePart,
   LedgerEntry,
+  StudentProfile,
 } from "@/lib/types";
+
+export function blankProfile(): StudentProfile {
+  return {
+    photo: "",
+    dateOfBirth: "",
+    gender: "",
+    bloodGroup: "",
+    qualification: "",
+    address: "",
+    parentName: "",
+    parentRelation: "",
+    parentContact: "",
+    emergencyName: "",
+    emergencyRelation: "",
+    emergencyContact: "",
+    otherContactName: "",
+    otherContact: "",
+    otherContactNote: "",
+  };
+}
+
+export function onBatch(admission: Admission, batchId: string) {
+  return admission.batchIds.includes(batchId) || admission.batchId === batchId;
+}
 
 export function isOpenEnquiry(status: EnquiryStatus) {
   return status !== "Joined" && status !== "Not interested" && status !== "Closed";
@@ -38,7 +63,7 @@ export function nextId(prefix: string, ids: string[]) {
   return `${prefix}-${String(max + 1).padStart(4, "0")}`;
 }
 
-export interface StudentView {
+export interface StudentView extends StudentProfile {
   name: string;
   contact: string;
   email: string;
@@ -49,6 +74,8 @@ export interface StudentView {
 export function studentForAdmission(data: AcademyData, admission: Admission): StudentView {
   const enquiry = data.enquiries.find((item) => item.id === admission.enquiryId);
   return {
+    ...blankProfile(),
+    ...enquiry,
     name: enquiry?.studentName ?? "Unknown student",
     contact: enquiry?.contact ?? "",
     email: enquiry?.email ?? "",
@@ -85,7 +112,7 @@ export function paymentRows(data: AcademyData): PaymentRow[] {
         signedAmount: entry.kind === "payment" ? entry.amount : -entry.amount,
         receivedBy: entry.receivedBy,
         note: entry.note,
-        href: `/admissions/${admission.id}`,
+        href: `/admissions/${admission.id}/fees`,
       });
     }
   }

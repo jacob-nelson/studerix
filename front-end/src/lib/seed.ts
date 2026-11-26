@@ -1,9 +1,14 @@
 import { seedBatches, seedCourses } from "@/lib/catalog-seed";
 import { DEFAULT_EXPORT_ROLES, copyPermissions } from "@/lib/permissions";
-import { paidAmount } from "@/lib/records";
-import type { AcademyData } from "@/lib/types";
+import { blankProfile, paidAmount } from "@/lib/records";
+import type { AcademyData, AttendanceEntry, StudentProfile } from "@/lib/types";
 
 export const DEMO_PASSWORD = "demo1234";
+
+function portrait(initials: string, color: string) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160"><rect width="160" height="160" fill="${color}"/><text x="80" y="98" text-anchor="middle" font-family="Georgia, serif" font-size="64" fill="white">${initials}</text></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
 
 export const DEMO_ACCOUNTS = [
   {
@@ -86,6 +91,7 @@ export function createSeed(): AcademyData {
     ],
     enquiries: [
       {
+        ...blankProfile(),
         id: "ENQ-1001",
         enquiryDate: "2026-10-20",
         studentName: "Devika Suresh",
@@ -101,6 +107,7 @@ export function createSeed(): AcademyData {
         nextAction: "",
       },
       {
+        ...blankProfile(),
         id: "ENQ-1002",
         enquiryDate: "2026-09-02",
         studentName: "Arjun Menon",
@@ -116,6 +123,7 @@ export function createSeed(): AcademyData {
         nextAction: "",
       },
       {
+        ...blankProfile(),
         id: "ENQ-1003",
         enquiryDate: "2026-11-06",
         studentName: "Fathima Rahman",
@@ -131,6 +139,7 @@ export function createSeed(): AcademyData {
         nextAction: "",
       },
       {
+        ...blankProfile(),
         id: "ENQ-1004",
         enquiryDate: "2026-10-28",
         studentName: "Nikhil Thomas",
@@ -146,6 +155,7 @@ export function createSeed(): AcademyData {
         nextAction: "",
       },
       {
+        ...blankProfile(),
         id: "ENQ-1005",
         enquiryDate: "2026-09-12",
         studentName: "Ananya Iyer",
@@ -161,6 +171,7 @@ export function createSeed(): AcademyData {
         nextAction: "",
       },
       {
+        ...blankProfile(),
         id: "ENQ-1006",
         enquiryDate: "2026-11-08",
         studentName: "Hari Prasad",
@@ -176,6 +187,7 @@ export function createSeed(): AcademyData {
         nextAction: "Add to the batch group and confirm the first instalment date.",
       },
       {
+        ...blankProfile(),
         id: "ENQ-1007",
         enquiryDate: "2026-11-11",
         studentName: "Neha Varma",
@@ -191,6 +203,7 @@ export function createSeed(): AcademyData {
         nextAction: "Share the November batch start date.",
       },
       {
+        ...blankProfile(),
         id: "ENQ-1008",
         enquiryDate: "2026-11-15",
         studentName: "Vishnu Raj",
@@ -206,6 +219,7 @@ export function createSeed(): AcademyData {
         nextAction: "Call with the fee breakup.",
       },
       {
+        ...blankProfile(),
         id: "ENQ-1009",
         enquiryDate: "2026-11-09",
         studentName: "Sandra John",
@@ -221,6 +235,7 @@ export function createSeed(): AcademyData {
         nextAction: "Confirm the seat and collect the first instalment.",
       },
       {
+        ...blankProfile(),
         id: "ENQ-1010",
         enquiryDate: "2026-11-04",
         studentName: "Akhil Bose",
@@ -236,6 +251,7 @@ export function createSeed(): AcademyData {
         nextAction: "Call again about the evening schedule.",
       },
       {
+        ...blankProfile(),
         id: "ENQ-1011",
         enquiryDate: "2026-10-15",
         studentName: "Priya Mohan",
@@ -251,6 +267,7 @@ export function createSeed(): AcademyData {
         nextAction: "",
       },
       {
+        ...blankProfile(),
         id: "ENQ-1012",
         enquiryDate: "2026-10-08",
         studentName: "Joseph Kurian",
@@ -278,6 +295,8 @@ export function createSeed(): AcademyData {
         joinedOn: "2026-11-02",
         status: "Active",
         batchId: "",
+        batchIds: [],
+        attendance: [],
         discontinuedOn: "",
         discontinueReason: "",
         feePlanName: "",
@@ -314,6 +333,8 @@ export function createSeed(): AcademyData {
         joinedOn: "2026-10-18",
         status: "Active",
         batchId: "",
+        batchIds: [],
+        attendance: [],
         discontinuedOn: "",
         discontinueReason: "",
         feePlanName: "",
@@ -359,6 +380,8 @@ export function createSeed(): AcademyData {
         joinedOn: "2026-11-12",
         status: "Active",
         batchId: "",
+        batchIds: [],
+        attendance: [],
         discontinuedOn: "",
         discontinueReason: "",
         feePlanName: "",
@@ -386,6 +409,8 @@ export function createSeed(): AcademyData {
         joinedOn: "2026-11-05",
         status: "Active",
         batchId: "",
+        batchIds: [],
+        attendance: [],
         discontinuedOn: "",
         discontinueReason: "",
         feePlanName: "",
@@ -422,6 +447,8 @@ export function createSeed(): AcademyData {
         joinedOn: "2026-09-20",
         status: "Active",
         batchId: "",
+        batchIds: [],
+        attendance: [],
         discontinuedOn: "",
         discontinueReason: "",
         feePlanName: "",
@@ -458,6 +485,8 @@ export function createSeed(): AcademyData {
         joinedOn: "2026-11-08",
         status: "Active",
         batchId: "",
+        batchIds: [],
+        attendance: [],
         discontinuedOn: "",
         discontinueReason: "",
         feePlanName: "",
@@ -718,8 +747,111 @@ export function createSeed(): AcademyData {
     courses: seedCourses,
     batches: seedBatches,
   };
+  const profiles: Record<string, Partial<StudentProfile>> = {
+    "ENQ-1001": {
+      photo: portrait("DS", "#1f4b4a"),
+      dateOfBirth: "2001-04-18",
+      gender: "Female",
+      bloodGroup: "B+",
+      qualification: "B.Tech Computer Science",
+      address: "42/3 Vyttila, Kochi 682019",
+      parentName: "Suresh Kumar",
+      parentRelation: "Father",
+      parentContact: "9847011001",
+      emergencyName: "Rekha Suresh",
+      emergencyRelation: "Mother",
+      emergencyContact: "9847011002",
+      otherContactName: "Anjali Suresh",
+      otherContact: "9847011003",
+      otherContactNote: "Sister. Lives in the same house.",
+    },
+    "ENQ-1002": {
+      photo: portrait("AM", "#3f4c6b"),
+      dateOfBirth: "1999-11-02",
+      gender: "Male",
+      bloodGroup: "O+",
+      qualification: "BCA",
+      address: "18 Kaloor Road, Kochi 682017",
+      parentName: "Menon Gopal",
+      parentRelation: "Father",
+      parentContact: "9847012001",
+      emergencyName: "Priya Menon",
+      emergencyRelation: "Mother",
+      emergencyContact: "9847012002",
+    },
+    "ENQ-1003": {
+      photo: portrait("FR", "#6b3f4c"),
+      dateOfBirth: "2002-08-21",
+      gender: "Female",
+      bloodGroup: "A+",
+      qualification: "B.Sc Mathematics",
+      address: "7 Edappally, Kochi 682024",
+      parentName: "Rahman Hameed",
+      parentRelation: "Father",
+      parentContact: "9847013001",
+      emergencyName: "Amina Rahman",
+      emergencyRelation: "Mother",
+      emergencyContact: "9847013002",
+    },
+    "ENQ-1004": {
+      photo: portrait("NT", "#3f5b3a"),
+      dateOfBirth: "2000-01-15",
+      gender: "Male",
+      bloodGroup: "O-",
+      qualification: "B.Tech Information Technology",
+      address: "14/88 Pullepady, Kaloor, Kochi 682017",
+      parentName: "Rajesh Menon",
+      parentRelation: "Father",
+      parentContact: "9847012345",
+      emergencyName: "Latha Menon",
+      emergencyRelation: "Mother",
+      emergencyContact: "9847098765",
+      otherContactName: "Anil Menon",
+      otherContact: "9847001122",
+      otherContactNote: "Uncle. Lives nearby and can pick him up.",
+    },
+    "ENQ-1005": {
+      photo: portrait("AI", "#5b463f"),
+      dateOfBirth: "2001-06-09",
+      gender: "Female",
+      bloodGroup: "AB+",
+      qualification: "MCA",
+      address: "3 Panampilly Nagar, Kochi 682036",
+      parentName: "Iyer Raman",
+      parentRelation: "Father",
+      parentContact: "9847015001",
+      emergencyName: "Meera Iyer",
+      emergencyRelation: "Mother",
+      emergencyContact: "9847015002",
+    },
+    "ENQ-1006": {
+      photo: portrait("HP", "#3f466b"),
+      dateOfBirth: "1998-12-30",
+      gender: "Male",
+      bloodGroup: "B-",
+      qualification: "MBA",
+      address: "55 Thrippunithura, Kochi 682301",
+      parentName: "Prasad Pillai",
+      parentRelation: "Father",
+      parentContact: "9847016001",
+      emergencyName: "Sujatha Prasad",
+      emergencyRelation: "Mother",
+      emergencyContact: "9847016002",
+    },
+  };
+  const nikhilAttendance: AttendanceEntry[] = [
+    { id: "ATT-0001", date: "2026-11-10", batchId: "BAT-0003", status: "Present", note: "" },
+    { id: "ATT-0002", date: "2026-11-12", batchId: "BAT-0003", status: "Present", note: "" },
+    { id: "ATT-0003", date: "2026-11-17", batchId: "BAT-0003", status: "Absent", note: "Fever" },
+    { id: "ATT-0004", date: "2026-11-19", batchId: "BAT-0003", status: "Late", note: "Reached after the break" },
+  ];
   return {
     ...draft,
+    enquiries: draft.enquiries.map((enquiry) => ({
+      ...blankProfile(),
+      ...enquiry,
+      ...profiles[enquiry.id],
+    })),
     admissions: draft.admissions.map((admission) => {
       const enquiry = draft.enquiries.find((item) => item.id === admission.enquiryId);
       const course = seedCourses.find((item) => item.name === enquiry?.course);
@@ -730,9 +862,12 @@ export function createSeed(): AcademyData {
             ? item.name === "50% in advance"
             : item.name === "Full payment in advance",
         ) ?? course?.feePlans[0];
+      const batchIds = seedBatches.filter((batch) => batch.name === admission.batch).map((batch) => batch.id);
       return {
         ...admission,
-        batchId: seedBatches.find((batch) => batch.name === admission.batch)?.id ?? "",
+        batchId: batchIds[0] ?? "",
+        batchIds,
+        attendance: admission.id === "ADM-2004" ? nikhilAttendance : [],
         feePlanName: plan?.name ?? "",
         feeSchedule: plan?.parts.map((part) => ({ ...part })) ?? [],
       };

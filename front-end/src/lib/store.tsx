@@ -9,8 +9,9 @@ import {
   useState,
 } from "react";
 
-import { nextId, paymentIds } from "@/lib/records";
+import { blankProfile, nextId, paymentIds } from "@/lib/records";
 import type {
+  AttendanceInput,
   BatchInput,
   ConsultancyInput,
   CourseInput,
@@ -25,6 +26,7 @@ import type {
   PlacementInput,
   ScheduleInput,
   StaffInput,
+  StudentProfileInput,
   SyllabusInput,
 } from "@/lib/schemas";
 import { createSeed } from "@/lib/seed";
@@ -128,7 +130,8 @@ type Action =
       audit: AuditEvent;
     }
   | { type: "set-admission-status"; admission: Admission; audit: AuditEvent }
-  | { type: "assign-batch"; admission: Admission; enquiry?: Enquiry; audit: AuditEvent };
+  | { type: "assign-batch"; admission: Admission; enquiry?: Enquiry; audit: AuditEvent }
+  | { type: "update-admission"; admission: Admission; audit: AuditEvent };
 
 function reducer(state: AcademyState, action: Action): AcademyState {
   switch (action.type) {
@@ -389,9 +392,30 @@ function reducer(state: AcademyState, action: Action): AcademyState {
           : state.enquiries,
         audit: [action.audit, ...state.audit],
       };
+    case "update-admission":
+      return {
+        ...state,
+        admissions: state.admissions.map((admission) =>
+          admission.id === action.admission.id ? action.admission : admission,
+        ),
+        audit: [action.audit, ...state.audit],
+      };
     default:
       return state;
   }
+}
+
+function withBatches(admission: Admission, batchIds: string[], batches: Batch[]): Admission {
+  const unique = [...new Set(batchIds)];
+  const names = unique
+    .map((id) => batches.find((batch) => batch.id === id)?.name)
+    .filter((name): name is string => Boolean(name));
+  return {
+    ...admission,
+    batchIds: unique,
+    batchId: unique[0] ?? "",
+    batch: names.join(", "),
+  };
 }
 
 function createAudit(
@@ -492,6 +516,10 @@ interface AcademyContextValue extends AcademyState {
     batchId: string,
     actor: string,
   ) => Success | Failure;
+  detachAdmissionBatch: (admissionId: string, batchId: string, actor: string) => Success | Failure;
+  updateStudentProfile: (enquiryId: string, input: StudentProfileInput, actor: string) => Success | Failure;
+  recordAttendance: (admissionId: string, input: AttendanceInput, actor: string) => Success | Failure;
+  removeAttendance: (admissionId: string, entryId: string, actor: string) => Success | Failure;
 }
 
 const AcademyContext = createContext<AcademyContextValue | null>(null);
@@ -573,6 +601,7 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
       },
       addEnquiry: (input, actor) => {
         const enquiry: Enquiry = {
+          ...blankProfile(),
           ...input,
           id: nextId(
             "ENQ",
@@ -642,6 +671,7 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
           enquiryId: enquiry.id,
           batch: input.batch,
           batchId: batchRecord?.id ?? "",
+          batchIds: batchRecord ? [batchRecord.id] : [],
           status: "Active",
           discontinuedOn: "",
           discontinueReason: "",
@@ -653,6 +683,7 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
           feePlanName: agreement.feePlanName,
           feeSchedule: agreement.feeSchedule,
           instalments: [],
+          attendance: [],
         };
         const opensPlacement = offering
           ? offering.opensPlacement
@@ -1140,13 +1171,16 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
       },
       addAdmission: (input, actor) => {
         const course = state.courses.find((item) => item.id === input.courseId);
-        const batch = state.batches.find((item) => item.id === input.batchId);
-        if (!course || !batch || batch.courseId !== course.id) {
-          return { ok: false, message: "Choose a batch that belongs to the course." };
+        const chosen = [...new Set(input.batchIds)]
+          .map((id) => state.batches.find((batch) => batch.id === id))
+          .filter((batch): batch is Batch => Boolean(batch));
+        if (!course || chosen.length !== new Set(input.batchIds).size || chosen.some((batch) => batch.courseId !== course.id)) {
+          return { ok: false, message: "Choose batches that belong to the course." };
         }
         const agreement = feeAgreement(course, input.feePlanId);
         if (!agreement.ok) return agreement;
         const enquiry: Enquiry = {
+          ...blankProfile(),
           id: nextId(
             "ENQ",
             state.enquiries.map((item) => item.id),
@@ -1155,6 +1189,21 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
           studentName: input.studentName,
           contact: input.contact,
           email: input.email,
+          photo: input.photo,
+          dateOfBirth: input.dateOfBirth,
+          gender: input.gender,
+          bloodGroup: input.bloodGroup,
+          qualification: input.qualification,
+          address: input.address,
+          parentName: input.parentName,
+          parentRelation: input.parentRelation,
+          parentContact: input.parentContact,
+          emergencyName: input.emergencyName,
+          emergencyRelation: input.emergencyRelation,
+          emergencyContact: input.emergencyContact,
+          otherContactName: input.otherContactName,
+          otherContact: input.otherContact,
+          otherContactNote: input.otherContactNote,
           groupAdded: false,
           source: input.source,
           course: course.name,
@@ -1164,26 +1213,32 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
           nextActionDate: "",
           nextAction: "",
         };
-        const admission: Admission = {
-          id: nextId(
-            "ADM",
-            state.admissions.map((item) => item.id),
-          ),
-          enquiryId: enquiry.id,
-          batch: batch.name,
-          batchId: batch.id,
-          status: "Active",
-          discontinuedOn: "",
-          discontinueReason: "",
-          source: input.source,
-          referralBonus: input.referralBonus,
-          referrerName: input.referrerName,
-          agreedFee: input.agreedFee,
-          joinedOn: input.joinedOn,
-          feePlanName: agreement.feePlanName,
-          feeSchedule: agreement.feeSchedule,
-          instalments: [],
-        };
+        const admission: Admission = withBatches(
+          {
+            id: nextId(
+              "ADM",
+              state.admissions.map((item) => item.id),
+            ),
+            enquiryId: enquiry.id,
+            batch: "",
+            batchId: "",
+            batchIds: [],
+            status: "Active",
+            discontinuedOn: "",
+            discontinueReason: "",
+            source: input.source,
+            referralBonus: input.referralBonus,
+            referrerName: input.referrerName,
+            agreedFee: input.agreedFee,
+            joinedOn: input.joinedOn,
+            feePlanName: agreement.feePlanName,
+            feeSchedule: agreement.feeSchedule,
+            instalments: [],
+            attendance: [],
+          },
+          chosen.map((batch) => batch.id),
+          state.batches,
+        );
         const placement: InternalPlacement | undefined = course.opensPlacement
           ? {
               id: nextId(
@@ -1210,8 +1265,8 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
             "Admissions",
             "Admission added",
             placement
-              ? `${input.studentName} joined ${batch.name}. Internal placement ${placement.id} opened.`
-              : `${input.studentName} joined ${batch.name}.`,
+              ? `${input.studentName} joined ${admission.batch}. Internal placement ${placement.id} opened.`
+              : `${input.studentName} joined ${admission.batch}.`,
           ),
         });
         return { ok: true, admissionId: admission.id };
@@ -1245,20 +1300,113 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
         const admission = state.admissions.find((item) => item.id === admissionId);
         const batch = state.batches.find((item) => item.id === batchId);
         if (!admission || !batch) return { ok: false, message: "Choose a batch that is still on the catalogue." };
-        const course = state.courses.find((item) => item.id === batch.courseId);
+        if (admission.batchIds.includes(batch.id)) {
+          return { ok: false, message: "This student is already on that batch." };
+        }
         const enquiry = state.enquiries.find((item) => item.id === admission.enquiryId);
-        const nextAdmission: Admission = { ...admission, batchId: batch.id, batch: batch.name };
-        const nextEnquiry = enquiry && course ? { ...enquiry, course: course.name } : undefined;
         dispatch({
-          type: "assign-batch",
-          admission: nextAdmission,
-          enquiry: nextEnquiry,
+          type: "update-admission",
+          admission: withBatches(admission, [...admission.batchIds, batch.id], state.batches),
           audit: createAudit(
             state,
             actor,
             "Admissions",
-            "Batch changed",
-            `${enquiry?.studentName ?? "Student"} moved to ${batch.name}.`,
+            "Batch attached",
+            `${enquiry?.studentName ?? "Student"} attached to ${batch.name}.`,
+          ),
+        });
+        return { ok: true };
+      },
+      detachAdmissionBatch: (admissionId, batchId, actor) => {
+        const admission = state.admissions.find((item) => item.id === admissionId);
+        const batch = state.batches.find((item) => item.id === batchId);
+        if (!admission || !batch || !admission.batchIds.includes(batch.id)) {
+          return { ok: false, message: "That batch is not on this admission." };
+        }
+        if (admission.batchIds.length <= 1) {
+          return { ok: false, message: "A student stays on at least one batch." };
+        }
+        const enquiry = state.enquiries.find((item) => item.id === admission.enquiryId);
+        dispatch({
+          type: "update-admission",
+          admission: withBatches(
+            admission,
+            admission.batchIds.filter((id) => id !== batch.id),
+            state.batches,
+          ),
+          audit: createAudit(
+            state,
+            actor,
+            "Admissions",
+            "Batch removed",
+            `${enquiry?.studentName ?? "Student"} removed from ${batch.name}.`,
+          ),
+        });
+        return { ok: true };
+      },
+      updateStudentProfile: (enquiryId, input, actor) => {
+        const enquiry = state.enquiries.find((item) => item.id === enquiryId);
+        if (!enquiry) return { ok: false, message: "That student is not on an admission." };
+        dispatch({
+          type: "update-enquiry",
+          enquiry: { ...enquiry, ...input },
+          audit: createAudit(
+            state,
+            actor,
+            "Admissions",
+            "Student details updated",
+            `Contact details updated for ${enquiry.studentName}.`,
+          ),
+        });
+        return { ok: true };
+      },
+      recordAttendance: (admissionId, input, actor) => {
+        const admission = state.admissions.find((item) => item.id === admissionId);
+        const batch = state.batches.find((item) => item.id === input.batchId);
+        if (!admission || !batch || !admission.batchIds.includes(batch.id)) {
+          return { ok: false, message: "Choose one of this student's batches." };
+        }
+        if (admission.attendance.some((entry) => entry.date === input.date && entry.batchId === batch.id)) {
+          return { ok: false, message: "Attendance is already marked for that batch on this date." };
+        }
+        const enquiry = state.enquiries.find((item) => item.id === admission.enquiryId);
+        const entry = {
+          id: nextId(
+            "ATT",
+            state.admissions.flatMap((item) => item.attendance.map((mark) => mark.id)),
+          ),
+          date: input.date,
+          batchId: batch.id,
+          status: input.status,
+          note: input.note,
+        };
+        dispatch({
+          type: "update-admission",
+          admission: { ...admission, attendance: [...admission.attendance, entry] },
+          audit: createAudit(
+            state,
+            actor,
+            "Admissions",
+            "Attendance marked",
+            `${enquiry?.studentName ?? "Student"} marked ${input.status.toLowerCase()} on ${batch.name}.`,
+          ),
+        });
+        return { ok: true };
+      },
+      removeAttendance: (admissionId, entryId, actor) => {
+        const admission = state.admissions.find((item) => item.id === admissionId);
+        const entry = admission?.attendance.find((item) => item.id === entryId);
+        if (!admission || !entry) return { ok: false, message: "That attendance mark is not on this student." };
+        const enquiry = state.enquiries.find((item) => item.id === admission.enquiryId);
+        dispatch({
+          type: "update-admission",
+          admission: { ...admission, attendance: admission.attendance.filter((item) => item.id !== entryId) },
+          audit: createAudit(
+            state,
+            actor,
+            "Admissions",
+            "Attendance removed",
+            `${enquiry?.studentName ?? "Student"} attendance on ${entry.date} was removed.`,
           ),
         });
         return { ok: true };

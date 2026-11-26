@@ -23,7 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { addWeeks, isoDate } from "@/lib/dates";
 import { formatDate, formatInr } from "@/lib/format";
 import { canManageAdmissions, canManageCourses } from "@/lib/permissions";
-import { scheduleAmounts, studentForAdmission } from "@/lib/records";
+import { onBatch, scheduleAmounts, studentForAdmission } from "@/lib/records";
 import {
   batchSchema,
   courseSchema,
@@ -190,7 +190,7 @@ export function CourseBatches({ id }: { id: string }) {
           {manage ? <BatchForm courseId={course.id} durationWeeks={course.durationWeeks} /> : null}
           {batches.length === 0 ? <p className="text-sm text-muted-foreground">No batch yet.</p> : null}
           {batches.map((batch) => {
-            const students = data.admissions.filter((admission) => admission.batchId === batch.id).length;
+            const students = data.admissions.filter((admission) => onBatch(admission, batch.id)).length;
             const staff = batch.staffIds.length;
             return (
               <Link
@@ -237,7 +237,7 @@ export function CourseBatch({ id, batchId }: { id: string; batchId: string }) {
   const students = useMemo<BatchStudentRow[]>(() => {
     if (!batch) return [];
     return data.admissions
-      .filter((admission) => admission.batchId === batch.id)
+      .filter((admission) => onBatch(admission, batch.id))
       .map((admission) => ({
         id: admission.id,
         name: studentForAdmission(data, admission).name,
@@ -396,7 +396,7 @@ export function CourseBatch({ id, batchId }: { id: string; batchId: string }) {
               {students.length} {students.length === 1 ? "student" : "students"} on this batch.
             </p>
           </div>
-          {canAttach ? <AttachStudent batchId={batch.id} courseName={course.name} /> : null}
+          {canAttach ? <AttachStudent batchId={batch.id} /> : null}
           <DataTable
             data={students}
             columns={studentColumns}
@@ -763,11 +763,11 @@ function AssignStaff({ batchId, assignedIds }: { batchId: string; assignedIds: s
   );
 }
 
-function AttachStudent({ batchId, courseName }: { batchId: string; courseName: string }) {
+function AttachStudent({ batchId }: { batchId: string }) {
   const data = useAcademy();
   const [admissionId, setAdmissionId] = useState("");
   const options = data.admissions
-    .filter((admission) => admission.batchId !== batchId && admission.status !== "Discontinued")
+    .filter((admission) => !onBatch(admission, batchId) && admission.status !== "Discontinued")
     .map((admission) => ({
       value: admission.id,
       label: `${studentForAdmission(data, admission).name} · ${admission.batch || "No batch"}`,
@@ -785,7 +785,7 @@ function AttachStudent({ batchId, courseName }: { batchId: string; courseName: s
           return;
         }
         setAdmissionId("");
-        toast.success(`Student attached to this batch and ${courseName}`);
+        toast.success(`Student attached to this batch`);
       }}
     >
       <div className="min-w-56 flex-1">
