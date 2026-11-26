@@ -59,6 +59,8 @@ export function DataTable<T extends RowData & { id: string }>({
   searchPlaceholder = "Search this list",
   toolbar,
   searchAlign = "start",
+  hideSearch = false,
+  filter,
   onRowClick,
   initialSorting = [],
   pageSize = 8,
@@ -68,11 +70,14 @@ export function DataTable<T extends RowData & { id: string }>({
   searchPlaceholder?: string;
   toolbar?: ReactNode;
   searchAlign?: "start" | "end";
+  hideSearch?: boolean;
+  filter?: string;
   onRowClick?: (row: T) => void;
   initialSorting?: SortingState;
   pageSize?: number;
 }) {
   const [globalFilter, setGlobalFilter] = useState("");
+  const activeFilter = filter ?? globalFilter;
   const table = useTable(
     {
       features,
@@ -80,7 +85,7 @@ export function DataTable<T extends RowData & { id: string }>({
       columns,
       getRowId: (row) => row.id,
       globalFilterFn: "includesString",
-      state: { globalFilter },
+      state: { globalFilter: activeFilter },
       onGlobalFilterChange: setGlobalFilter,
       initialState: {
         pagination: { pageIndex: 0, pageSize },
@@ -101,10 +106,12 @@ export function DataTable<T extends RowData & { id: string }>({
 
   return (
     <div className="grid gap-3">
+      {hideSearch && !toolbar ? null : (
       <div className="flex flex-wrap items-center gap-2">
         {toolbar}
+        {hideSearch ? null : (
         <Input
-          value={globalFilter}
+          value={activeFilter}
           onChange={(event) => table.setGlobalFilter(event.target.value)}
           placeholder={searchPlaceholder}
           aria-label={searchPlaceholder}
@@ -113,7 +120,9 @@ export function DataTable<T extends RowData & { id: string }>({
             searchAlign === "end" ? "w-full sm:ml-auto sm:w-64" : "w-full flex-1 sm:max-w-sm",
           )}
         />
+        )}
       </div>
+      )}
       <div className="overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
         <Table>
           <TableHeader>

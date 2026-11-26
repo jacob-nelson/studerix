@@ -1,14 +1,41 @@
-import { daysUntil } from "@/lib/dates";
+import { daysUntil, isoDate } from "@/lib/dates";
 import type {
   AcademyData,
   Admission,
   EnquiryStatus,
   FeePart,
   LedgerEntry,
+  SalaryRevision,
+  StaffAttendance,
   StudentProfile,
 } from "@/lib/types";
 
 export const DUE_SOON_DAYS = 7;
+
+export function currentRevision(revisions: SalaryRevision[], asOf = isoDate(new Date())) {
+  return (
+    revisions
+      .filter((item) => item.effectiveOn <= asOf)
+      .sort((a, b) => b.effectiveOn.localeCompare(a.effectiveOn) || b.id.localeCompare(a.id))[0] ?? null
+  );
+}
+
+export function nextRevision(revisions: SalaryRevision[], asOf = isoDate(new Date())) {
+  return (
+    revisions
+      .filter((item) => item.effectiveOn > asOf)
+      .sort((a, b) => a.effectiveOn.localeCompare(b.effectiveOn))[0] ?? null
+  );
+}
+
+export function attendanceTally(entries: StaffAttendance[]) {
+  const present = entries.filter((item) => item.status === "Present").length;
+  const late = entries.filter((item) => item.status === "Late").length;
+  const absent = entries.filter((item) => item.status === "Absent").length;
+  const marked = present + late + absent;
+  const rate = marked === 0 ? null : Math.round(((present + late) / marked) * 100);
+  return { present, late, absent, marked, rate };
+}
 
 export function testStanding(conductedOn: string, now = new Date()) {
   const days = daysUntil(conductedOn, now);

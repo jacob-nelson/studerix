@@ -24,8 +24,11 @@ import type {
   JoinInput,
   LedgerInput,
   PlacementInput,
+  SalaryRevisionInput,
+  SalaryTransferInput,
   ScheduleInput,
   StaffAttendanceInput,
+  StaffBankInput,
   StaffInput,
   StudentProfileInput,
   SyllabusInput,
@@ -51,6 +54,8 @@ import type {
   LedgerEntry,
   ModuleKey,
   Role,
+  SalaryRevision,
+  SalaryTransfer,
   StaffAttendance,
   StaffUser,
   SyllabusTopic,
@@ -508,6 +513,11 @@ interface AcademyContextValue extends AcademyState {
   addStaff: (input: StaffInput, actor: string) => Success<{ id: string; email: string }> | Failure;
   recordStaffAttendance: (staffId: string, input: StaffAttendanceInput, actor: string) => Success | Failure;
   removeStaffAttendance: (staffId: string, entryId: string, actor: string) => Success | Failure;
+  updateStaffBank: (staffId: string, input: StaffBankInput, actor: string) => Success | Failure;
+  reviseStaffSalary: (staffId: string, input: SalaryRevisionInput, actor: string) => Success | Failure;
+  removeSalaryRevision: (staffId: string, revisionId: string, actor: string) => Success | Failure;
+  recordSalaryTransfer: (staffId: string, input: SalaryTransferInput, actor: string) => Success | Failure;
+  removeSalaryTransfer: (staffId: string, transferId: string, actor: string) => Success | Failure;
   setStaffActive: (
     userId: string,
     active: boolean,
@@ -899,6 +909,19 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
           relievedOn: input.relievedOn,
           address: input.address.trim(),
           attendance,
+          bank: input.bank,
+          revisions: [
+            {
+              id: nextId(
+                "SRV",
+                state.staff.flatMap((item) => item.revisions.map((revision) => revision.id)),
+              ),
+              effectiveOn: input.joinedOn,
+              amount: input.offeredSalary,
+              reason: "Opening offer",
+            },
+          ],
+          transfers: [],
         };
         dispatch({
           type: "add-staff",
@@ -954,6 +977,107 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
             "Access",
             "Staff attendance removed",
             `${person.name} attendance on ${entry.date} was removed.`,
+          ),
+        });
+        return { ok: true };
+      },
+      updateStaffBank: (staffId, input, actor) => {
+        const person = state.staff.find((item) => item.id === staffId);
+        if (!person) return { ok: false, message: "That staff member was not found." };
+        dispatch({
+          type: "update-staff",
+          user: { ...person, bank: input },
+          audit: createAudit(state, actor, "Access", "Bank details updated", `${person.name} bank details were updated.`),
+        });
+        return { ok: true };
+      },
+      reviseStaffSalary: (staffId, input, actor) => {
+        const person = state.staff.find((item) => item.id === staffId);
+        if (!person) return { ok: false, message: "That staff member was not found." };
+        if (person.revisions.some((item) => item.effectiveOn === input.effectiveOn)) {
+          return { ok: false, message: "A revision already starts on this date." };
+        }
+        const revision: SalaryRevision = {
+          id: nextId(
+            "SRV",
+            state.staff.flatMap((item) => item.revisions.map((entry) => entry.id)),
+          ),
+          effectiveOn: input.effectiveOn,
+          amount: input.amount,
+          reason: input.reason.trim(),
+        };
+        dispatch({
+          type: "update-staff",
+          user: { ...person, revisions: [...person.revisions, revision] },
+          audit: createAudit(
+            state,
+            actor,
+            "Access",
+            "Salary revised",
+            `${person.name} salary revised to ₹${input.amount.toLocaleString("en-IN")} from ${input.effectiveOn}.`,
+          ),
+        });
+        return { ok: true };
+      },
+      removeSalaryRevision: (staffId, revisionId, actor) => {
+        const person = state.staff.find((item) => item.id === staffId);
+        const revision = person?.revisions.find((item) => item.id === revisionId);
+        if (!person || !revision) return { ok: false, message: "That revision is not on this staff member." };
+        if (person.revisions.length <= 1) return { ok: false, message: "Keep at least one offered salary." };
+        dispatch({
+          type: "update-staff",
+          user: { ...person, revisions: person.revisions.filter((item) => item.id !== revisionId) },
+          audit: createAudit(
+            state,
+            actor,
+            "Access",
+            "Salary revision removed",
+            `${person.name} revision from ${revision.effectiveOn} was removed.`,
+          ),
+        });
+        return { ok: true };
+      },
+      recordSalaryTransfer: (staffId, input, actor) => {
+        const person = state.staff.find((item) => item.id === staffId);
+        if (!person) return { ok: false, message: "That staff member was not found." };
+        const transfer: SalaryTransfer = {
+          id: nextId(
+            "STR",
+            state.staff.flatMap((item) => item.transfers.map((entry) => entry.id)),
+          ),
+          paidOn: input.paidOn,
+          period: input.period,
+          amount: input.amount,
+          mode: input.mode,
+          reference: input.reference.trim(),
+          note: input.note.trim(),
+        };
+        dispatch({
+          type: "update-staff",
+          user: { ...person, transfers: [...person.transfers, transfer] },
+          audit: createAudit(
+            state,
+            actor,
+            "Access",
+            "Salary transferred",
+            `₹${input.amount.toLocaleString("en-IN")} transferred to ${person.name}.`,
+          ),
+        });
+        return { ok: true };
+      },
+      removeSalaryTransfer: (staffId, transferId, actor) => {
+        const person = state.staff.find((item) => item.id === staffId);
+        const transfer = person?.transfers.find((item) => item.id === transferId);
+        if (!person || !transfer) return { ok: false, message: "That transfer is not on this staff member." };
+        dispatch({
+          type: "update-staff",
+          user: { ...person, transfers: person.transfers.filter((item) => item.id !== transferId) },
+          audit: createAudit(
+            state,
+            actor,
+            "Access",
+            "Salary transfer removed",
+            `${person.name} transfer on ${transfer.paidOn} was removed.`,
           ),
         });
         return { ok: true };

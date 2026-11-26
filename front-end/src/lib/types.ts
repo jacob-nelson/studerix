@@ -284,6 +284,30 @@ export interface StaffAttendance {
   note: string;
 }
 
+export interface StaffBank {
+  accountName: string;
+  bankName: string;
+  accountNumber: string;
+  ifsc: string;
+}
+
+export interface SalaryRevision {
+  id: string;
+  effectiveOn: string;
+  amount: number;
+  reason: string;
+}
+
+export interface SalaryTransfer {
+  id: string;
+  paidOn: string;
+  period: string;
+  amount: number;
+  mode: PaymentMode;
+  reference: string;
+  note: string;
+}
+
 export interface StaffUser {
   id: string;
   name: string;
@@ -301,6 +325,9 @@ export interface StaffUser {
   relievedOn: string;
   address: string;
   attendance: StaffAttendance[];
+  bank: StaffBank;
+  revisions: SalaryRevision[];
+  transfers: SalaryTransfer[];
 }
 
 export interface AuditEvent {

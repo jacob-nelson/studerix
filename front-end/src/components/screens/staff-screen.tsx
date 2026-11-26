@@ -12,10 +12,12 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { Checkbox } from "@/components/ui/checkbox";
 import { accessLevel, type PermissionMatrix } from "@/lib/permissions";
 import { useAcademy } from "@/lib/store";
+import { useStaffSearch } from "@/components/screens/staff-shell";
 import { ROLES, type ModuleKey, type Role, type StaffUser } from "@/lib/types";
 
 export function StaffScreen() {
   const data = useAcademy();
+  const { query } = useStaffSearch();
   const router = useRouter();
   const level = data.user ? accessLevel(data.user.role, "staff", data.permissions) : "none";
 
@@ -71,7 +73,8 @@ export function StaffScreen() {
     <DataTable
       data={data.staff}
       columns={columns}
-      searchPlaceholder="Search staff"
+      filter={query}
+      hideSearch
       onRowClick={(person) => router.push(`/staff/${person.id}`)}
     />
   );
@@ -133,6 +136,7 @@ export function StaffRoles() {
   const level = data.user ? accessLevel(data.user.role, "staff", data.permissions) : "none";
   const [draftPermissions, setDraftPermissions] = useState(() => clonePermissions(data.permissions));
   const [draftExports, setDraftExports] = useState<Role[]>(() => [...data.exportRoles]);
+  const { query } = useStaffSearch();
   if (level === "none" || !data.user) return null;
   const editable = level === "write";
   const dirty =
@@ -196,7 +200,7 @@ export function StaffRoles() {
             </tr>
           </thead>
           <tbody>
-            {PERMISSION_ROWS.map((row, index) => (
+            {PERMISSION_ROWS.filter((row) => row.label.toLowerCase().includes(query.trim().toLowerCase())).map((row, index) => (
               <tr key={row.id} className={index % 2 === 1 ? "bg-muted/40" : undefined}>
                 <td className="px-3 py-2.5">{row.label}</td>
                 {ROLES.map((role) => {

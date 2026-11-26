@@ -2,23 +2,33 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 
 import { PageHeader } from "@/components/page-header";
 import { AccessDenied } from "@/components/states";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "cn";
 import { accessLevel } from "@/lib/permissions";
 import { useAcademy } from "@/lib/store";
 
+const StaffSearchContext = createContext({ query: "", setQuery: (_value: string) => {} });
+
+export function useStaffSearch() {
+  return useContext(StaffSearchContext);
+}
+
 export function StaffShell({ children }: { children: ReactNode }) {
   const data = useAcademy();
   const pathname = usePathname();
+  const [query, setQuery] = useState("");
   const level = data.user ? accessLevel(data.user.role, "staff", data.permissions) : "none";
+  const searchLabel = pathname.startsWith("/staff/roles") ? "Search permissions" : "Search staff";
 
   if (level === "none") return <AccessDenied />;
 
   const sections = [
+    { href: "/staff/dashboard", label: "Dashboard", exact: false },
     { href: "/staff", label: "People", count: data.staff.length, exact: true },
     { href: "/staff/roles", label: "Roles", exact: false },
   ];
@@ -28,7 +38,7 @@ export function StaffShell({ children }: { children: ReactNode }) {
       <PageHeader
         eyebrow="People"
         title="Staff"
-        description="Onboard teaching and non-teaching staff. Assign one or more of them from a batch."
+        description="See who is in, who is on leave, and open a person for their attendance and leave history."
         actions={
           level === "write" ? (
             <Button asChild>
@@ -37,7 +47,9 @@ export function StaffShell({ children }: { children: ReactNode }) {
           ) : null
         }
       />
-      <nav aria-label="Staff sections" className="flex gap-1 overflow-x-auto border-b">
+      <StaffSearchContext.Provider value={{ query, setQuery }}>
+      <div className="flex items-end gap-3 border-b">
+      <nav aria-label="Staff sections" className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
         {sections.map((section) => {
           const current = section.exact ? pathname === section.href : pathname.startsWith(section.href);
           return (
@@ -60,7 +72,16 @@ export function StaffShell({ children }: { children: ReactNode }) {
           );
         })}
       </nav>
+      <Input
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder={searchLabel}
+        aria-label={searchLabel}
+        className="mb-2 w-full max-w-64 shrink-0 bg-card"
+      />
+      </div>
       {children}
+      </StaffSearchContext.Provider>
     </div>
   );
 }

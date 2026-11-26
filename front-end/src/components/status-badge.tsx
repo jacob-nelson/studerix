@@ -37,6 +37,7 @@ const TONES: Record<string, string> = {
   Present: "bg-emerald-100 text-emerald-950",
   Absent: "bg-rose-100 text-rose-900",
   Late: "bg-amber-100 text-amber-950",
+  "Not marked": "bg-stone-200 text-stone-600",
 };
 
 export function StatusBadge({ value }: { value: string }) {

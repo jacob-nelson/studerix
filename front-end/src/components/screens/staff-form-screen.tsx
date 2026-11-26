@@ -25,6 +25,9 @@ import { staffSchema, type StaffInput } from "@/lib/schemas";
 import { useAcademy } from "@/lib/store";
 import { ATTENDANCE_MARKS, BLOOD_GROUPS, GENDERS, ROLES, STAFF_KINDS } from "@/lib/types";
 
+const plainNumber =
+  "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+
 export function StaffFormScreen() {
   const data = useAcademy();
   const router = useRouter();
@@ -42,6 +45,8 @@ export function StaffFormScreen() {
       qualifications: [{ title: "" }],
       joinedOn: isoDate(new Date()),
       relievedOn: "",
+      offeredSalary: undefined as unknown as number,
+      bank: { accountName: "", bankName: "", accountNumber: "", ifsc: "" },
       kind: "Teaching",
       role: "Faculty",
       password: "",
@@ -195,6 +200,41 @@ export function StaffFormScreen() {
                   )}
                 />
               </Field>
+            </div>
+            <div className="grid gap-3">
+              <p className="text-sm font-medium">Salary and bank</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field
+                  label="Offered salary"
+                  htmlFor="offered-salary"
+                  hint="Monthly amount when they join."
+                  error={form.formState.errors.offeredSalary?.message}
+                >
+                  <Input
+                    id="offered-salary"
+                    type="number"
+                    min={1}
+                    className={plainNumber}
+                    {...form.register("offeredSalary", { valueAsNumber: true })}
+                  />
+                </Field>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Account name" htmlFor="account-name" error={form.formState.errors.bank?.accountName?.message}>
+                  <Input id="account-name" {...form.register("bank.accountName")} />
+                </Field>
+                <Field label="Bank" htmlFor="bank-name" error={form.formState.errors.bank?.bankName?.message}>
+                  <Input id="bank-name" {...form.register("bank.bankName")} />
+                </Field>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Account number" htmlFor="account-number" error={form.formState.errors.bank?.accountNumber?.message}>
+                  <Input id="account-number" inputMode="numeric" {...form.register("bank.accountNumber")} />
+                </Field>
+                <Field label="IFSC" htmlFor="ifsc" error={form.formState.errors.bank?.ifsc?.message}>
+                  <Input id="ifsc" {...form.register("bank.ifsc")} />
+                </Field>
+              </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Type" error={form.formState.errors.kind?.message}>

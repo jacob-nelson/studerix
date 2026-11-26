@@ -38,15 +38,91 @@ export const DEMO_ACCOUNTS = [
   },
 ];
 
-function staffMember(person: StaffUser): StaffUser {
-  return person;
+const OFFERED_SALARY: Record<string, number> = {
+  "STF-0001": 45000,
+  "STF-0002": 28000,
+  "STF-0003": 32000,
+  "STF-0004": 30000,
+  "STF-0005": 40000,
+  "STF-0006": 22000,
+  "STF-0007": 35000,
+  "STF-0008": 34000,
+  "STF-0009": 22000,
+};
+
+function staffMember(
+  person: Omit<StaffUser, "bank" | "revisions" | "transfers"> &
+    Partial<Pick<StaffUser, "bank" | "revisions" | "transfers">>,
+): StaffUser {
+  const { bank, revisions, transfers, ...rest } = person;
+  const revisionList = revisions ?? [
+    {
+      id: `SRV-${person.id.slice(-4)}`,
+      effectiveOn: person.joinedOn,
+      amount: OFFERED_SALARY[person.id] ?? 25000,
+      reason: "Opening offer",
+    },
+  ];
+  const latest = [...revisionList].sort((a, b) => b.effectiveOn.localeCompare(a.effectiveOn))[0];
+  return {
+    ...rest,
+    bank: bank ?? {
+      accountName: person.name,
+      bankName: "Federal Bank",
+      accountNumber: `501000${person.id.slice(-4)}182`,
+      ifsc: "FDRL0001456",
+    },
+    revisions: revisionList,
+    transfers:
+      transfers ??
+      (person.relievedOn
+        ? []
+        : [
+            {
+              id: `STR-${person.id.slice(-4)}`,
+              paidOn: "2026-11-03",
+              period: "2026-11",
+              amount: latest.amount,
+              mode: "Bank transfer",
+              reference: "",
+              note: "November salary",
+            },
+          ]),
+  };
 }
 
 const staffAttendance: StaffAttendance[] = [
   { id: "STA-0001", date: "2026-11-24", status: "Present", note: "" },
   { id: "STA-0002", date: "2026-11-25", status: "Present", note: "Took the morning lab" },
   { id: "STA-0003", date: "2026-11-24", status: "Late", note: "Reached after the first period" },
+  { id: "STA-0004", date: "2026-11-26", status: "Present", note: "" },
+  { id: "STA-0005", date: "2026-06-02", status: "Absent", note: "Out of station" },
+  { id: "STA-0006", date: "2026-11-26", status: "Present", note: "" },
+  { id: "STA-0007", date: "2026-11-23", status: "Late", note: "Traffic on the way in" },
+  { id: "STA-0008", date: "2026-11-26", status: "Absent", note: "Sick leave" },
+  { id: "STA-0009", date: "2026-11-12", status: "Absent", note: "Medical leave" },
+  { id: "STA-0010", date: "2026-11-25", status: "Present", note: "" },
+  { id: "STA-0011", date: "2026-11-26", status: "Late", note: "Reached after the first class" },
+  { id: "STA-0012", date: "2026-10-20", status: "Absent", note: "Family function" },
+  { id: "STA-0013", date: "2026-11-26", status: "Present", note: "" },
+  { id: "STA-0014", date: "2026-09-04", status: "Absent", note: "Casual leave" },
+  { id: "STA-0015", date: "2026-11-26", status: "Present", note: "" },
+  { id: "STA-0016", date: "2026-08-14", status: "Absent", note: "Leave" },
+  { id: "STA-0017", date: "2026-11-25", status: "Present", note: "" },
+  { id: "STA-0018", date: "2026-11-26", status: "Absent", note: "Personal leave" },
+  { id: "STA-0019", date: "2026-11-26", status: "Present", note: "" },
+  { id: "STA-0020", date: "2026-11-10", status: "Absent", note: "Casual leave" },
+  { id: "STA-0021", date: "2026-11-24", status: "Present", note: "" },
+  { id: "STA-0022", date: "2026-08-10", status: "Absent", note: "Casual leave before relieving" },
 ];
+
+function marksFor(...ids: string[]) {
+  return ids.map((id) => {
+    const mark = staffAttendance.find((item) => item.id === id);
+    if (!mark) throw new Error(`Missing attendance ${id}`);
+    return mark;
+  });
+}
 
 export function createSeed(): AcademyData {
   const staff: StaffUser[] = [
@@ -66,7 +142,37 @@ export function createSeed(): AcademyData {
       joinedOn: "2018-06-01",
       relievedOn: "",
       address: "Panampilly Nagar, Kochi 682036",
-      attendance: [],
+      attendance: marksFor("STA-0004", "STA-0005", "STA-0021"),
+      bank: {
+        accountName: "Anjali Menon",
+        bankName: "Federal Bank",
+        accountNumber: "145601000011821",
+        ifsc: "FDRL0001456",
+      },
+      revisions: [
+        { id: "SRV-0001", effectiveOn: "2018-06-01", amount: 32000, reason: "Opening offer" },
+        { id: "SRV-0011", effectiveOn: "2024-04-01", amount: 45000, reason: "Annual revision" },
+      ],
+      transfers: [
+        {
+          id: "STR-0001",
+          paidOn: "2026-10-03",
+          period: "2026-10",
+          amount: 45000,
+          mode: "Bank transfer",
+          reference: "UTR908211",
+          note: "October salary",
+        },
+        {
+          id: "STR-0011",
+          paidOn: "2026-11-03",
+          period: "2026-11",
+          amount: 45000,
+          mode: "Bank transfer",
+          reference: "UTR911044",
+          note: "November salary",
+        },
+      ],
     }),
     staffMember({
       id: "STF-0002",
@@ -84,7 +190,7 @@ export function createSeed(): AcademyData {
       joinedOn: "2021-04-12",
       relievedOn: "",
       address: "Edappally, Kochi 682024",
-      attendance: [],
+      attendance: marksFor("STA-0006", "STA-0007"),
     }),
     staffMember({
       id: "STF-0003",
@@ -102,7 +208,7 @@ export function createSeed(): AcademyData {
       joinedOn: "2020-01-06",
       relievedOn: "",
       address: "Vyttila, Kochi 682019",
-      attendance: [],
+      attendance: marksFor("STA-0008", "STA-0009", "STA-0010"),
     }),
     staffMember({
       id: "STF-0004",
@@ -120,7 +226,7 @@ export function createSeed(): AcademyData {
       joinedOn: "2022-07-18",
       relievedOn: "",
       address: "Kaloor, Kochi 682017",
-      attendance: [],
+      attendance: marksFor("STA-0011", "STA-0012"),
     }),
     staffMember({
       id: "STF-0005",
@@ -138,7 +244,7 @@ export function createSeed(): AcademyData {
       joinedOn: "2019-11-04",
       relievedOn: "",
       address: "Kadavanthra, Kochi 682020",
-      attendance: [],
+      attendance: marksFor("STA-0013", "STA-0014"),
     }),
     staffMember({
       id: "STF-0006",
@@ -156,7 +262,18 @@ export function createSeed(): AcademyData {
       joinedOn: "2024-01-15",
       relievedOn: "2026-08-31",
       address: "Fort Kochi, Kochi 682001",
-      attendance: [],
+      attendance: marksFor("STA-0022"),
+      transfers: [
+        {
+          id: "STR-0013",
+          paidOn: "2026-08-03",
+          period: "2026-08",
+          amount: 22000,
+          mode: "Bank transfer",
+          reference: "UTR880214",
+          note: "Final salary",
+        },
+      ],
     }),
     staffMember({
       id: "STF-0007",
@@ -174,7 +291,28 @@ export function createSeed(): AcademyData {
       joinedOn: "2023-05-02",
       relievedOn: "",
       address: "Palarivattom, Kochi 682025",
-      attendance: [staffAttendance[0], staffAttendance[1]],
+      attendance: marksFor("STA-0001", "STA-0002", "STA-0015", "STA-0016"),
+      bank: {
+        accountName: "Priya Nair",
+        bankName: "State Bank of India",
+        accountNumber: "30214567890123",
+        ifsc: "SBIN0004321",
+      },
+      revisions: [
+        { id: "SRV-0007", effectiveOn: "2023-05-02", amount: 28000, reason: "Opening offer" },
+        { id: "SRV-0012", effectiveOn: "2025-06-01", amount: 35000, reason: "Increment after the testing batches" },
+      ],
+      transfers: [
+        {
+          id: "STR-0012",
+          paidOn: "2026-11-03",
+          period: "2026-11",
+          amount: 35000,
+          mode: "Bank transfer",
+          reference: "UTR911208",
+          note: "November salary",
+        },
+      ],
     }),
     staffMember({
       id: "STF-0008",
@@ -192,7 +330,18 @@ export function createSeed(): AcademyData {
       joinedOn: "2022-08-16",
       relievedOn: "",
       address: "Aluva, Kochi 683101",
-      attendance: [staffAttendance[2]],
+      attendance: marksFor("STA-0003", "STA-0017", "STA-0018"),
+      transfers: [
+        {
+          id: "STR-0014",
+          paidOn: "2026-11-03",
+          period: "2026-11",
+          amount: 20000,
+          mode: "UPI",
+          reference: "UPI411902",
+          note: "Advance. Balance still due.",
+        },
+      ],
     }),
     staffMember({
       id: "STF-0009",
@@ -210,7 +359,7 @@ export function createSeed(): AcademyData {
       joinedOn: "2024-02-01",
       relievedOn: "",
       address: "Tripunithura, Kochi 682301",
-      attendance: [],
+      attendance: marksFor("STA-0019", "STA-0020"),
     }),
   ];
   const draft: AcademyData = {

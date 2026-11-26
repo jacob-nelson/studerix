@@ -219,6 +219,37 @@ export const consultancySchema = z.object({
   notes: z.string().trim().max(400),
 });
 
+const ifsc = z
+  .string()
+  .trim()
+  .regex(/^[A-Za-z]{4}0[A-Za-z0-9]{6}$/, "Enter a valid IFSC")
+  .transform((value) => value.toUpperCase());
+
+export const staffBankSchema = z.object({
+  accountName: z.string().trim().min(2, "Enter the account name"),
+  bankName: z.string().trim().min(2, "Enter the bank name"),
+  accountNumber: z
+    .string()
+    .trim()
+    .regex(/^\d{9,18}$/, "Enter the account number"),
+  ifsc,
+});
+
+export const salaryRevisionSchema = z.object({
+  effectiveOn: z.string().min(1, "Enter the date"),
+  amount: rupee("Enter the salary"),
+  reason: z.string().trim().min(2, "Enter why the salary changed").max(160, "Keep the reason within 160 characters"),
+});
+
+export const salaryTransferSchema = z.object({
+  paidOn: z.string().min(1, "Enter the date"),
+  period: z.string().regex(/^\d{4}-\d{2}$/, "Choose the month"),
+  amount: rupee("Enter the amount"),
+  mode: z.enum(PAYMENT_MODES, "Choose how it was paid"),
+  reference: z.string().trim().max(40, "Keep the reference within 40 characters"),
+  note: z.string().trim().max(160, "Keep the note within 160 characters"),
+});
+
 export const staffAttendanceSchema = z.object({
   date: z.string().min(1, "Enter the date"),
   status: z.enum(ATTENDANCE_MARKS, "Choose present, absent, or late"),
@@ -240,6 +271,8 @@ export const staffSchema = z
       .max(8, "Keep qualifications to eight"),
     joinedOn: z.string().min(1, "Enter the joining date"),
     relievedOn: z.string(),
+    offeredSalary: rupee("Enter the offered salary"),
+    bank: staffBankSchema,
     kind: z.enum(STAFF_KINDS, "Choose teaching or non-teaching"),
     role: z.enum(ROLES, "Choose a role"),
     password: z.string().min(8, "Use at least 8 characters"),
@@ -364,6 +397,9 @@ export type PlacementInput = z.infer<typeof placementSchema>;
 export type ConsultancyInput = z.infer<typeof consultancySchema>;
 export type StaffInput = z.infer<typeof staffSchema>;
 export type StaffAttendanceInput = z.infer<typeof staffAttendanceSchema>;
+export type StaffBankInput = z.infer<typeof staffBankSchema>;
+export type SalaryRevisionInput = z.infer<typeof salaryRevisionSchema>;
+export type SalaryTransferInput = z.infer<typeof salaryTransferSchema>;
 export type CourseInput = z.infer<typeof courseSchema>;
 export type SyllabusInput = z.infer<typeof syllabusSchema>;
 export type FeePlanInput = z.infer<typeof feePlanSchema>;

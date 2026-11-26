@@ -62,6 +62,10 @@ export function periodBounds(
   return { from: isoDate(start), to: isoDate(now) };
 }
 
+export function calendarYearBounds(now = new Date()) {
+  return { from: `${now.getFullYear()}-01-01`, to: isoDate(now) };
+}
+
 export function inPeriod(iso: string, from: string, to: string) {
   return Boolean(iso) && iso >= from && iso <= to;
 }
