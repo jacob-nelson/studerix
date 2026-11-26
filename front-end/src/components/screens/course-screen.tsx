@@ -9,6 +9,7 @@ import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { DataTable, type AppColumn } from "@/components/data-table";
+import { BatchTests } from "@/components/screens/batch-tests";
 import { Field } from "@/components/field";
 import { DateField } from "@/components/forms/date-field";
 import { OptionSelect } from "@/components/forms/option-select";
@@ -20,7 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { addWeeks, isoDate } from "@/lib/dates";
+import { addWeeks, isoDate, weekdayLabel } from "@/lib/dates";
 import { formatDate, formatInr } from "@/lib/format";
 import { canManageAdmissions, canManageCourses } from "@/lib/permissions";
 import { onBatch, scheduleAmounts, studentForAdmission } from "@/lib/records";
@@ -37,7 +38,7 @@ import {
   type SyllabusInput,
 } from "@/lib/schemas";
 import { useAcademy } from "@/lib/store";
-import { WEEKDAYS, type Admission, type ClassSlot, type CourseOffering } from "@/lib/types";
+import type { Admission, ClassSlot, CourseOffering } from "@/lib/types";
 
 const plainNumber =
   "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
@@ -80,10 +81,11 @@ export function CourseFees({ id }: { id: string }) {
         <CardHeader>
           <CardTitle>Fee plans</CardTitle>
           <CardDescription>
-            How this course fee is collected. Full payment in advance, 50% in advance, or any split that adds up to 100%.
+            How this course fee is collected. Each instalment has its own due date, and the parts add up to 100%.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
+          {manage ? <FeePlanForm courseId={course.id} /> : null}
           {course.feePlans.length === 0 ? (
             <p className="text-sm text-muted-foreground">No fee plans yet.</p>
           ) : (
@@ -113,6 +115,7 @@ export function CourseFees({ id }: { id: string }) {
                         <span>
                           {part.label}
                           <span className="ml-2 text-muted-foreground">{part.percent}%</span>
+                          <span className="ml-2 text-muted-foreground">Due {formatDate(part.dueOn)}</span>
                         </span>
                         <span className="tabular-nums">{formatInr(part.amount)}</span>
                       </li>
@@ -122,7 +125,6 @@ export function CourseFees({ id }: { id: string }) {
               ))}
             </ul>
           )}
-          {manage ? <FeePlanForm courseId={course.id} /> : null}
         </CardContent>
       </Card>
   );
@@ -183,7 +185,7 @@ export function CourseBatches({ id }: { id: string }) {
         <CardHeader>
           <CardTitle>Batches</CardTitle>
           <CardDescription>
-            Open a batch to manage its classes, staff, and students.
+            Open a batch to manage its classes, staff, students, and tests.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-6">
@@ -249,14 +251,17 @@ export function CourseBatch({ id, batchId }: { id: string; batchId: string }) {
     const columns: AppColumn<ClassSlot>[] = [
       {
         id: "when",
-        accessorFn: (slot) => `${String(WEEKDAYS.indexOf(slot.day)).padStart(2, "0")} ${slot.start}`,
+        accessorFn: (slot) => `${slot.date} ${slot.start}`,
         header: "When",
         sortFn: "alphanumeric",
         cell: (info) => {
           const slot = info.row.original;
           return (
-            <span className="font-medium whitespace-nowrap">
-              {slot.day} {slot.start}–{slot.end}
+            <span className="whitespace-nowrap">
+              <span className="block font-medium">{formatDate(slot.date)}</span>
+              <span className="text-muted-foreground">
+                {weekdayLabel(slot.date)} {slot.start}–{slot.end}
+              </span>
             </span>
           );
         },
@@ -328,50 +333,70 @@ export function CourseBatch({ id, batchId }: { id: string; batchId: string }) {
           <Link href={`/courses/${id}/batches`}>All batches</Link>
         </Button>
       </div>
-      <section className="grid gap-3">
-        <div>
-          <h3 className="font-medium">Staff</h3>
-          <p className="text-sm text-muted-foreground">
-            Assign one or more teaching or non-teaching staff to this batch.
-          </p>
-        </div>
-        {batch.staffIds.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No staff on this batch yet.</p>
-        ) : (
-          <ul className="grid gap-2">
-            {batch.staffIds.map((staffId) => {
-              const person = data.staff.find((item) => item.id === staffId);
-              if (!person) return null;
-              return (
-                <li key={person.id} className="flex items-center justify-between gap-3 text-sm">
-                  <span className="font-medium">{person.name}</span>
-                  <span className="flex items-center gap-2">
-                    <StatusBadge value={person.kind} />
-                    {person.active ? null : <StatusBadge value="Inactive" />}
-                    {manage ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="w-fit"
-                        onClick={() => {
-                          const result = data.removeBatchStaff(batch.id, person.id, data.user!.name);
-                          if (!result.ok) toast.error(result.message);
-                          else toast.success(`${person.name} removed from this batch`);
-                        }}
-                      >
-                        Remove
-                      </Button>
-                    ) : null}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        {manage ? <AssignStaff batchId={batch.id} assignedIds={batch.staffIds} /> : null}
-      </section>
       <div className="grid items-start gap-6 lg:grid-cols-2">
+        <div className="grid gap-6">
+          <section className="grid gap-3">
+            <div>
+              <h3 className="font-medium">Staff</h3>
+              <p className="text-sm text-muted-foreground">
+                Assign one or more teaching or non-teaching staff to this batch.
+              </p>
+            </div>
+            {batch.staffIds.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No staff on this batch yet.</p>
+            ) : (
+              <ul className="grid gap-2">
+                {batch.staffIds.map((staffId) => {
+                  const person = data.staff.find((item) => item.id === staffId);
+                  if (!person) return null;
+                  return (
+                    <li key={person.id} className="flex items-center justify-between gap-3 text-sm">
+                      <span className="font-medium">{person.name}</span>
+                      <span className="flex items-center gap-2">
+                        <StatusBadge value={person.kind} />
+                        {person.active ? null : <StatusBadge value="Inactive" />}
+                        {manage ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="w-fit"
+                            onClick={() => {
+                              const result = data.removeBatchStaff(batch.id, person.id, data.user!.name);
+                              if (!result.ok) toast.error(result.message);
+                              else toast.success(`${person.name} removed from this batch`);
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        ) : null}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {manage ? <AssignStaff batchId={batch.id} assignedIds={batch.staffIds} /> : null}
+          </section>
+          <section className="grid gap-3">
+            <div>
+              <h3 className="font-medium">Students</h3>
+              <p className="text-sm text-muted-foreground">
+                {students.length} {students.length === 1 ? "student" : "students"} on this batch.
+              </p>
+            </div>
+            {canAttach ? <AttachStudent batchId={batch.id} /> : null}
+            <DataTable
+              data={students}
+              columns={studentColumns}
+              searchPlaceholder="Search students"
+              searchAlign="end"
+              pageSize={8}
+              initialSorting={[{ id: "name", desc: false }]}
+              onRowClick={(row) => router.push(`/admissions/${row.id}`)}
+            />
+          </section>
+        </div>
         <section className="grid gap-3">
           <div>
             <h3 className="font-medium">Classes</h3>
@@ -389,25 +414,8 @@ export function CourseBatch({ id, batchId }: { id: string; batchId: string }) {
             initialSorting={[{ id: "when", desc: false }]}
           />
         </section>
-        <section className="grid gap-3">
-          <div>
-            <h3 className="font-medium">Students</h3>
-            <p className="text-sm text-muted-foreground">
-              {students.length} {students.length === 1 ? "student" : "students"} on this batch.
-            </p>
-          </div>
-          {canAttach ? <AttachStudent batchId={batch.id} /> : null}
-          <DataTable
-            data={students}
-            columns={studentColumns}
-            searchPlaceholder="Search students"
-            searchAlign="end"
-            pageSize={8}
-            initialSorting={[{ id: "name", desc: false }]}
-            onRowClick={(row) => router.push(`/admissions/${row.id}`)}
-          />
-        </section>
       </div>
+      <BatchTests batchId={batch.id} record={canAttach} />
     </div>
   );
 }
@@ -492,7 +500,7 @@ function FeePlanForm({ courseId }: { courseId: string }) {
   const data = useAcademy();
   const form = useForm<FeePlanInput>({
     resolver: zodResolver(feePlanSchema),
-    defaultValues: { name: "", parts: [{ label: "On joining", percent: 100 }] },
+    defaultValues: { name: "", parts: [{ label: "On joining", percent: 100, dueOn: "" }] },
   });
   const parts = useFieldArray({ control: form.control, name: "parts" });
   const watched = form.watch("parts");
@@ -501,7 +509,7 @@ function FeePlanForm({ courseId }: { courseId: string }) {
 
   return (
     <form
-      className="grid gap-3 border-t pt-4"
+      className="grid gap-3 border-b pb-4"
       noValidate
       onSubmit={form.handleSubmit((values) => {
         const result = data.addFeePlan(courseId, values, data.user!.name);
@@ -509,7 +517,7 @@ function FeePlanForm({ courseId }: { courseId: string }) {
           toast.error(result.message);
           return;
         }
-        form.reset({ name: "", parts: [{ label: "On joining", percent: 100 }] });
+        form.reset({ name: "", parts: [{ label: "On joining", percent: 100, dueOn: "" }] });
         toast.success("Fee plan added");
       })}
     >
@@ -518,7 +526,7 @@ function FeePlanForm({ courseId }: { courseId: string }) {
         <Input id="planName" placeholder="50% in advance" {...form.register("name")} />
       </Field>
       {parts.fields.map((field, index) => (
-        <div key={field.id} className="grid gap-3 sm:grid-cols-[1fr_7rem_auto] sm:items-end">
+        <div key={field.id} className="grid gap-3 sm:grid-cols-[1fr_7rem_11rem_auto] sm:items-end">
           <Field label={index === 0 ? "Part" : `Part ${index + 1}`} htmlFor={`plan-label-${index}`} error={errors.parts?.[index]?.label?.message}>
             <Input id={`plan-label-${index}`} placeholder="On joining" {...form.register(`parts.${index}.label`)} />
           </Field>
@@ -530,6 +538,15 @@ function FeePlanForm({ courseId }: { courseId: string }) {
               max={100}
               className={plainNumber}
               {...form.register(`parts.${index}.percent`, { valueAsNumber: true })}
+            />
+          </Field>
+          <Field label="Due date" error={errors.parts?.[index]?.dueOn?.message}>
+            <Controller
+              control={form.control}
+              name={`parts.${index}.dueOn`}
+              render={({ field: dueField }) => (
+                <DateField label="Due date" value={dueField.value} onChange={dueField.onChange} />
+              )}
             />
           </Field>
           <Button
@@ -551,7 +568,7 @@ function FeePlanForm({ courseId }: { courseId: string }) {
           variant="outline"
           className="w-fit"
           disabled={parts.fields.length >= 6}
-          onClick={() => parts.append({ label: "", percent: 0 })}
+          onClick={() => parts.append({ label: "", percent: 0, dueOn: "" })}
         >
           Add part
         </Button>
@@ -611,7 +628,7 @@ function ScheduleForm({ batchId }: { batchId: string }) {
   const data = useAcademy();
   const form = useForm<ScheduleInput>({
     resolver: zodResolver(scheduleSchema),
-    defaultValues: { day: "Mon", start: "09:30", end: "12:30", topic: "" },
+    defaultValues: { date: isoDate(new Date()), start: "09:30", end: "12:30", topic: "" },
   });
   const errors = form.formState.errors;
 
@@ -630,13 +647,11 @@ function ScheduleForm({ batchId }: { batchId: string }) {
       })}
     >
       <div className="grid gap-3 sm:grid-cols-3">
-        <Field label="Day" error={errors.day?.message}>
+        <Field label="Date" error={errors.date?.message}>
           <Controller
             control={form.control}
-            name="day"
-            render={({ field }) => (
-              <OptionSelect value={field.value} onChange={field.onChange} options={WEEKDAYS} />
-            )}
+            name="date"
+            render={({ field }) => <DateField label="Date" value={field.value} onChange={field.onChange} />}
           />
         </Field>
         <Field label="Start" htmlFor={`slotStart-${batchId}`} error={errors.start?.message}>

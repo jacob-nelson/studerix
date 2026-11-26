@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 
-import { blankProfile, nextId, paymentIds } from "@/lib/records";
+import { blankProfile, nextId, onBatch, paymentIds } from "@/lib/records";
 import type {
   AttendanceInput,
   BatchInput,
@@ -25,9 +25,11 @@ import type {
   LedgerInput,
   PlacementInput,
   ScheduleInput,
+  StaffAttendanceInput,
   StaffInput,
   StudentProfileInput,
   SyllabusInput,
+  TestInput,
 } from "@/lib/schemas";
 import { createSeed } from "@/lib/seed";
 import type {
@@ -36,6 +38,7 @@ import type {
   AdmissionStatus,
   AuditEvent,
   Batch,
+  BatchTest,
   ClassSlot,
   ConsultancyCandidate,
   CourseOffering,
@@ -48,6 +51,7 @@ import type {
   LedgerEntry,
   ModuleKey,
   Role,
+  StaffAttendance,
   StaffUser,
   SyllabusTopic,
 } from "@/lib/types";
@@ -64,7 +68,7 @@ function feeAgreement(
   return {
     ok: true,
     feePlanName: plan.name,
-    feeSchedule: plan.parts.map((part) => ({ label: part.label, percent: part.percent })),
+    feeSchedule: plan.parts.map((part) => ({ label: part.label, percent: part.percent, dueOn: part.dueOn })),
   };
 }
 
@@ -102,6 +106,7 @@ type Action =
       audit: AuditEvent;
     }
   | { type: "add-staff"; user: StaffUser; audit: AuditEvent }
+  | { type: "update-staff"; user: StaffUser; audit: AuditEvent }
   | { type: "set-staff-active"; userId: string; active: boolean; audit: AuditEvent }
   | { type: "set-permission"; role: Role; module: ModuleKey; level: AccessLevel; audit: AuditEvent }
   | { type: "set-export"; role: Role; allowed: boolean; audit: AuditEvent }
@@ -131,7 +136,9 @@ type Action =
     }
   | { type: "set-admission-status"; admission: Admission; audit: AuditEvent }
   | { type: "assign-batch"; admission: Admission; enquiry?: Enquiry; audit: AuditEvent }
-  | { type: "update-admission"; admission: Admission; audit: AuditEvent };
+  | { type: "update-admission"; admission: Admission; audit: AuditEvent }
+  | { type: "add-test"; test: BatchTest; audit: AuditEvent }
+  | { type: "remove-test"; testId: string; audit: AuditEvent };
 
 function reducer(state: AcademyState, action: Action): AcademyState {
   switch (action.type) {
@@ -227,6 +234,12 @@ function reducer(state: AcademyState, action: Action): AcademyState {
       return {
         ...state,
         staff: [...state.staff, action.user],
+        audit: [action.audit, ...state.audit],
+      };
+    case "update-staff":
+      return {
+        ...state,
+        staff: state.staff.map((user) => (user.id === action.user.id ? action.user : user)),
         audit: [action.audit, ...state.audit],
       };
     case "set-staff-active":
@@ -400,6 +413,18 @@ function reducer(state: AcademyState, action: Action): AcademyState {
         ),
         audit: [action.audit, ...state.audit],
       };
+    case "add-test":
+      return {
+        ...state,
+        tests: [action.test, ...state.tests],
+        audit: [action.audit, ...state.audit],
+      };
+    case "remove-test":
+      return {
+        ...state,
+        tests: state.tests.filter((test) => test.id !== action.testId),
+        audit: [action.audit, ...state.audit],
+      };
     default:
       return state;
   }
@@ -480,7 +505,9 @@ interface AcademyContextValue extends AcademyState {
     input: LedgerInput,
     actor: string,
   ) => Success | Failure;
-  addStaff: (input: StaffInput, actor: string) => Success<{ email: string }> | Failure;
+  addStaff: (input: StaffInput, actor: string) => Success<{ id: string; email: string }> | Failure;
+  recordStaffAttendance: (staffId: string, input: StaffAttendanceInput, actor: string) => Success | Failure;
+  removeStaffAttendance: (staffId: string, entryId: string, actor: string) => Success | Failure;
   setStaffActive: (
     userId: string,
     active: boolean,
@@ -520,6 +547,8 @@ interface AcademyContextValue extends AcademyState {
   updateStudentProfile: (enquiryId: string, input: StudentProfileInput, actor: string) => Success | Failure;
   recordAttendance: (admissionId: string, input: AttendanceInput, actor: string) => Success | Failure;
   removeAttendance: (admissionId: string, entryId: string, actor: string) => Success | Failure;
+  recordTest: (batchId: string, input: TestInput, actor: string) => Success | Failure;
+  removeTest: (testId: string, actor: string) => Success | Failure;
 }
 
 const AcademyContext = createContext<AcademyContextValue | null>(null);
@@ -844,12 +873,32 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
         if (exists) {
           return { ok: false, message: "A staff login with that email already exists." };
         }
+        let attendanceIds = state.staff.flatMap((item) => item.attendance.map((entry) => entry.id));
+        const attendance: StaffAttendance[] = input.attendance.map((entry) => {
+          const id = nextId("STA", attendanceIds);
+          attendanceIds = [...attendanceIds, id];
+          return { id, date: entry.date, status: entry.status, note: entry.note.trim() };
+        });
         const staffUser: StaffUser = {
-          ...input,
           id: nextId(
             "STF",
             state.staff.map((item) => item.id),
           ),
+          name: input.name.trim(),
+          email: input.email.trim(),
+          kind: input.kind,
+          role: input.role,
+          active: input.active,
+          password: input.password,
+          photo: input.photo,
+          contact: input.contact,
+          gender: input.gender,
+          bloodGroup: input.bloodGroup,
+          qualifications: input.qualifications.map((item) => item.title.trim()),
+          joinedOn: input.joinedOn,
+          relievedOn: input.relievedOn,
+          address: input.address.trim(),
+          attendance,
         };
         dispatch({
           type: "add-staff",
@@ -862,7 +911,52 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
             `${staffUser.name} onboarded as ${staffUser.kind.toLowerCase()} staff.`,
           ),
         });
-        return { ok: true, email: staffUser.email };
+        return { ok: true, id: staffUser.id, email: staffUser.email };
+      },
+      recordStaffAttendance: (staffId, input, actor) => {
+        const person = state.staff.find((item) => item.id === staffId);
+        if (!person) return { ok: false, message: "That staff member was not found." };
+        if (person.attendance.some((entry) => entry.date === input.date)) {
+          return { ok: false, message: "Attendance is already marked for this date." };
+        }
+        const entry: StaffAttendance = {
+          id: nextId(
+            "STA",
+            state.staff.flatMap((item) => item.attendance.map((mark) => mark.id)),
+          ),
+          date: input.date,
+          status: input.status,
+          note: input.note.trim(),
+        };
+        dispatch({
+          type: "update-staff",
+          user: { ...person, attendance: [...person.attendance, entry] },
+          audit: createAudit(
+            state,
+            actor,
+            "Access",
+            "Staff attendance marked",
+            `${person.name} marked ${input.status.toLowerCase()} on ${input.date}.`,
+          ),
+        });
+        return { ok: true };
+      },
+      removeStaffAttendance: (staffId, entryId, actor) => {
+        const person = state.staff.find((item) => item.id === staffId);
+        const entry = person?.attendance.find((item) => item.id === entryId);
+        if (!person || !entry) return { ok: false, message: "That attendance mark is not on this staff member." };
+        dispatch({
+          type: "update-staff",
+          user: { ...person, attendance: person.attendance.filter((item) => item.id !== entryId) },
+          audit: createAudit(
+            state,
+            actor,
+            "Access",
+            "Staff attendance removed",
+            `${person.name} attendance on ${entry.date} was removed.`,
+          ),
+        });
+        return { ok: true };
       },
       setStaffActive: (userId, active, actor) => {
         const target = state.staff.find((item) => item.id === userId);
@@ -1040,7 +1134,7 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
             actor,
             "Courses",
             "Schedule updated",
-            `${slot.day} ${slot.start} added to ${batch.name}.`,
+            `${slot.date} ${slot.start} added to ${batch.name}.`,
           ),
         });
         return { ok: true };
@@ -1071,7 +1165,7 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
             state.courses.flatMap((item) => item.feePlans.map((feePlan) => feePlan.id)),
           ),
           name: input.name,
-          parts: input.parts.map((part) => ({ label: part.label, percent: part.percent })),
+          parts: input.parts.map((part) => ({ label: part.label, percent: part.percent, dueOn: part.dueOn })),
         };
         dispatch({
           type: "add-fee-plan",
@@ -1407,6 +1501,76 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
             "Admissions",
             "Attendance removed",
             `${enquiry?.studentName ?? "Student"} attendance on ${entry.date} was removed.`,
+          ),
+        });
+        return { ok: true };
+      },
+      recordTest: (batchId, input, actor) => {
+        const batch = state.batches.find((item) => item.id === batchId);
+        const conductor = state.staff.find((item) => item.id === input.staffId);
+        if (!batch) return { ok: false, message: "That batch is no longer available." };
+        if (
+          !conductor ||
+          conductor.kind !== "Teaching" ||
+          !conductor.active ||
+          !batch.staffIds.includes(conductor.id)
+        ) {
+          return { ok: false, message: "Choose a teaching staff member assigned to this batch." };
+        }
+        const onThisBatch = state.admissions.filter((admission) => onBatch(admission, batch.id));
+        const covered = new Set(input.results.map((result) => result.admissionId));
+        if (
+          onThisBatch.length === 0 ||
+          onThisBatch.some((admission) => !covered.has(admission.id)) ||
+          input.results.some((result) => !onThisBatch.some((admission) => admission.id === result.admissionId))
+        ) {
+          return { ok: false, message: "Record a mark for every student on this batch." };
+        }
+        if (input.results.some((result) => result.marks > input.maxMarks)) {
+          return { ok: false, message: "A mark is higher than the maximum." };
+        }
+        const test: BatchTest = {
+          id: nextId(
+            "TST",
+            state.tests.map((item) => item.id),
+          ),
+          batchId: batch.id,
+          title: input.title.trim(),
+          conductedOn: input.conductedOn,
+          staffId: conductor.id,
+          maxMarks: input.maxMarks,
+          results: input.results.map((result) => ({
+            admissionId: result.admissionId,
+            marks: result.marks,
+            remarks: result.remarks.trim(),
+          })),
+        };
+        dispatch({
+          type: "add-test",
+          test,
+          audit: createAudit(
+            state,
+            actor,
+            "Admissions",
+            "Test recorded",
+            `${test.title} on ${batch.name}, conducted by ${conductor.name}.`,
+          ),
+        });
+        return { ok: true };
+      },
+      removeTest: (testId, actor) => {
+        const test = state.tests.find((item) => item.id === testId);
+        if (!test) return { ok: false, message: "That test is no longer on this batch." };
+        const batch = state.batches.find((item) => item.id === test.batchId);
+        dispatch({
+          type: "remove-test",
+          testId,
+          audit: createAudit(
+            state,
+            actor,
+            "Admissions",
+            "Test removed",
+            `${test.title} on ${batch?.name ?? "a batch"} was removed.`,
           ),
         });
         return { ok: true };

@@ -109,11 +109,12 @@ export function canManageAdmissions(role: Role, permissions: PermissionMatrix) {
   );
 }
 
-export const NAV_ITEMS: { href: string; label: string; module: ModuleKey }[] = [
+export const NAV_ITEMS: { href: string; label: string; module: ModuleKey; roles?: readonly Role[] }[] = [
   { href: "/dashboard", label: "Dashboard", module: "dashboard" },
   { href: "/enquiries", label: "Enquiries", module: "enquiries" },
   { href: "/courses", label: "Courses", module: "courses" },
   { href: "/admissions", label: "Admissions & fees", module: "admissions" },
+  { href: "/tests", label: "Tests", module: "admissions", roles: ["Administrator"] },
   { href: "/expenses", label: "Expenses", module: "expenses" },
   { href: "/placements", label: "Internal placements", module: "placements" },
   { href: "/consultancy", label: "Consultancy", module: "consultancy" },

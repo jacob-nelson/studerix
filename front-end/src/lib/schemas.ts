@@ -14,7 +14,6 @@ import {
   GENDERS,
   SOURCES,
   STAFF_KINDS,
-  WEEKDAYS,
 } from "@/lib/types";
 
 const mobile = z
@@ -59,6 +58,38 @@ export const attendanceSchema = z.object({
   status: z.enum(ATTENDANCE_MARKS, "Choose present, absent, or late"),
   note: z.string().trim().max(160, "Keep the note within 160 characters"),
 });
+
+export const testSchema = z
+  .object({
+    title: z.string().trim().min(2, "Enter the test name").max(80, "Keep the name within 80 characters"),
+    conductedOn: z.string().min(1, "Enter the date"),
+    staffId: z.string().min(1, "Choose who conducted the test"),
+    maxMarks: z
+      .number({ error: "Enter the maximum mark" })
+      .int("Use a whole number")
+      .positive("Enter the maximum mark")
+      .max(1000, "Keep the maximum within 1000"),
+    results: z
+      .array(
+        z.object({
+          admissionId: z.string().min(1),
+          marks: z.number({ error: "Enter the mark" }).int("Use a whole number").nonnegative("Enter the mark"),
+          remarks: z.string().trim().max(160, "Keep the remark within 160 characters"),
+        }),
+      )
+      .min(1, "Add students to this batch before recording a test"),
+  })
+  .superRefine((value, ctx) => {
+    value.results.forEach((result, index) => {
+      if (result.marks > value.maxMarks) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["results", index, "marks"],
+          message: "Mark is higher than the maximum",
+        });
+      }
+    });
+  });
 
 function rupee(message: string, allowZero = false) {
   const amount = z.number({ error: message });
@@ -148,11 +179,23 @@ export function ledgerSchema(balance: number, paid: number) {
     });
 }
 
+const billFile = z.object({
+  name: z.string().min(1),
+  type: z.string().min(1),
+  dataUrl: z
+    .string()
+    .min(1)
+    .refine((value) => value.startsWith("data:") && value.length < 2_000_000, "Each bill must be under 1.5 MB"),
+});
+
 export const expenseSchema = z.object({
   date: z.string().min(1, "Enter the expense date"),
   purpose: z.string().trim().min(2, "Enter the purpose"),
   amount: rupee("Enter the amount"),
   debitedBy: z.string().min(1, "Choose who debited this"),
+  invoiceNumber: z.string().trim().max(40, "Keep the invoice number within 40 characters"),
+  notes: z.string().trim().max(500, "Keep the notes within 500 characters"),
+  bills: z.array(billFile).max(5, "Attach up to 5 bills"),
 });
 
 export const placementSchema = z.object({
@@ -176,14 +219,43 @@ export const consultancySchema = z.object({
   notes: z.string().trim().max(400),
 });
 
-export const staffSchema = z.object({
-  name: z.string().trim().min(2, "Enter the staff name"),
-  email: z.email("Enter a valid email"),
-  kind: z.enum(STAFF_KINDS, "Choose teaching or non-teaching"),
-  role: z.enum(ROLES, "Choose a role"),
-  password: z.string().min(8, "Use at least 8 characters"),
-  active: z.boolean(),
+export const staffAttendanceSchema = z.object({
+  date: z.string().min(1, "Enter the date"),
+  status: z.enum(ATTENDANCE_MARKS, "Choose present, absent, or late"),
+  note: z.string().trim().max(160, "Keep the note within 160 characters"),
 });
+
+export const staffSchema = z
+  .object({
+    name: z.string().trim().min(2, "Enter the staff name"),
+    email: z.email("Enter a valid email"),
+    contact: mobile,
+    photo,
+    gender: z.enum(GENDERS, "Choose a gender"),
+    bloodGroup: z.enum(BLOOD_GROUPS, "Choose a blood group"),
+    address: z.string().trim().min(5, "Enter the address"),
+    qualifications: z
+      .array(z.object({ title: z.string().trim().min(2, "Enter the qualification") }))
+      .min(1, "Add a qualification")
+      .max(8, "Keep qualifications to eight"),
+    joinedOn: z.string().min(1, "Enter the joining date"),
+    relievedOn: z.string(),
+    kind: z.enum(STAFF_KINDS, "Choose teaching or non-teaching"),
+    role: z.enum(ROLES, "Choose a role"),
+    password: z.string().min(8, "Use at least 8 characters"),
+    active: z.boolean(),
+    attendance: z
+      .array(staffAttendanceSchema)
+      .max(30, "Keep the first attendance list shorter"),
+  })
+  .refine((value) => !value.relievedOn || value.relievedOn >= value.joinedOn, {
+    path: ["relievedOn"],
+    message: "Relieving date cannot be before the joining date",
+  })
+  .refine((value) => new Set(value.attendance.map((entry) => entry.date)).size === value.attendance.length, {
+    path: ["attendance"],
+    message: "Each attendance date can be marked only once",
+  });
 
 const weeks = z.number({ error: "Enter the duration in weeks" }).int().positive("Enter the duration in weeks");
 
@@ -214,6 +286,7 @@ export const feePlanSchema = z
         z.object({
           label: z.string().trim().min(2, "Name this part"),
           percent: share,
+          dueOn: z.string().min(1, "Enter the due date"),
         }),
       )
       .min(1, "Add at least one part")
@@ -225,7 +298,7 @@ export const feePlanSchema = z
   });
 
 export const scheduleSchema = z.object({
-  day: z.enum(WEEKDAYS, "Choose a day"),
+  date: z.string().min(1, "Enter the date"),
   start: z.string().trim().min(4, "Enter the start time"),
   end: z.string().trim().min(4, "Enter the end time"),
   topic: z.string().trim().min(2, "Enter what is taught"),
@@ -290,6 +363,7 @@ export type ExpenseInput = z.infer<typeof expenseSchema>;
 export type PlacementInput = z.infer<typeof placementSchema>;
 export type ConsultancyInput = z.infer<typeof consultancySchema>;
 export type StaffInput = z.infer<typeof staffSchema>;
+export type StaffAttendanceInput = z.infer<typeof staffAttendanceSchema>;
 export type CourseInput = z.infer<typeof courseSchema>;
 export type SyllabusInput = z.infer<typeof syllabusSchema>;
 export type FeePlanInput = z.infer<typeof feePlanSchema>;
@@ -298,4 +372,5 @@ export type BatchInput = z.infer<typeof batchSchema>;
 export type DirectAdmissionInput = z.infer<typeof directAdmissionSchema>;
 export type StudentProfileInput = z.infer<typeof studentProfileSchema>;
 export type AttendanceInput = z.infer<typeof attendanceSchema>;
+export type TestInput = z.infer<typeof testSchema>;
 export type DiscontinueInput = z.infer<typeof discontinueSchema>;

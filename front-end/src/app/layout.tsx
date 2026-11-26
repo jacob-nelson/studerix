@@ -3,6 +3,7 @@ import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 
 import { RegisterPWA } from "@/components/register-pwa";
 import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { AcademyProvider } from "@/lib/store";
 
 import "./globals.css";
@@ -54,11 +55,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background text-foreground">
-        <AcademyProvider>
-          <RegisterPWA />
-          {children}
-          <Toaster position="top-right" />
-        </AcademyProvider>
+        <TooltipProvider>
+          <AcademyProvider>
+            <RegisterPWA />
+            {children}
+            <Toaster position="top-right" />
+          </AcademyProvider>
+        </TooltipProvider>
       </body>
     </html>
   );

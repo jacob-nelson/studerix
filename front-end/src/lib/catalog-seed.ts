@@ -1,16 +1,21 @@
+import { addWeeks } from "@/lib/dates";
 import type { Batch, CourseOffering, FeePlan } from "@/lib/types";
 
-function fullPlan(id: string): FeePlan {
-  return { id, name: "Full payment in advance", parts: [{ label: "On joining", percent: 100 }] };
+function fullPlan(id: string, startsOn: string): FeePlan {
+  return {
+    id,
+    name: "Full payment in advance",
+    parts: [{ label: "On joining", percent: 100, dueOn: startsOn }],
+  };
 }
 
-function halfPlan(id: string): FeePlan {
+function halfPlan(id: string, startsOn: string, weeks: number): FeePlan {
   return {
     id,
     name: "50% in advance",
     parts: [
-      { label: "On joining", percent: 50 },
-      { label: "Before the midpoint", percent: 50 },
+      { label: "On joining", percent: 50, dueOn: startsOn },
+      { label: "Before the midpoint", percent: 50, dueOn: addWeeks(startsOn, Math.round(weeks / 2)) },
     ],
   };
 }
@@ -29,15 +34,15 @@ export const seedCourses: CourseOffering[] = [
       { id: "SYL-0003", title: "Projects, mocks, and interview practice", hours: 20 },
     ],
     feePlans: [
-      fullPlan("PLN-0001"),
-      halfPlan("PLN-0002"),
+      fullPlan("PLN-0001", "2026-11-02"),
+      halfPlan("PLN-0002", "2026-11-02", 16),
       {
         id: "PLN-0003",
         name: "Three instalments",
         parts: [
-          { label: "On joining", percent: 40 },
-          { label: "Week 6", percent: 30 },
-          { label: "Before completion", percent: 30 },
+          { label: "On joining", percent: 40, dueOn: "2026-11-02" },
+          { label: "Week 6", percent: 30, dueOn: addWeeks("2026-11-02", 6) },
+          { label: "Before completion", percent: 30, dueOn: "2027-02-19" },
         ],
       },
     ],
@@ -54,7 +59,7 @@ export const seedCourses: CourseOffering[] = [
       { id: "SYL-0005", title: "React and APIs", hours: 40 },
       { id: "SYL-0006", title: "Node, databases, and deployment", hours: 30 },
     ],
-    feePlans: [fullPlan("PLN-0004"), halfPlan("PLN-0005")],
+    feePlans: [fullPlan("PLN-0004", "2026-10-05"), halfPlan("PLN-0005", "2026-10-05", 20)],
   },
   {
     id: "CRS-0003",
@@ -68,7 +73,7 @@ export const seedCourses: CourseOffering[] = [
       { id: "SYL-0008", title: "SQL for analysis", hours: 24 },
       { id: "SYL-0009", title: "Dashboards and storytelling", hours: 16 },
     ],
-    feePlans: [fullPlan("PLN-0006"), halfPlan("PLN-0007")],
+    feePlans: [fullPlan("PLN-0006", "2026-11-09"), halfPlan("PLN-0007", "2026-11-09", 12)],
   },
   {
     id: "CRS-0004",
@@ -81,7 +86,7 @@ export const seedCourses: CourseOffering[] = [
       { id: "SYL-0010", title: "Syntax, functions, and files", hours: 16 },
       { id: "SYL-0011", title: "Data handling and a capstone script", hours: 16 },
     ],
-    feePlans: [fullPlan("PLN-0008"), halfPlan("PLN-0009")],
+    feePlans: [fullPlan("PLN-0008", "2027-01-04"), halfPlan("PLN-0009", "2027-01-04", 8)],
   },
   {
     id: "CRS-0005",
@@ -94,15 +99,17 @@ export const seedCourses: CourseOffering[] = [
       { id: "SYL-0012", title: "Linux and Git", hours: 16 },
       { id: "SYL-0013", title: "CI and containers", hours: 24 },
     ],
-    feePlans: [fullPlan("PLN-0010"), halfPlan("PLN-0011")],
+    feePlans: [fullPlan("PLN-0010", "2026-11-02"), halfPlan("PLN-0011", "2026-11-02", 12)],
   },
 ];
 
-const weekdayTesting = (ids: [string, string, string]): Batch["schedule"] => [
-  { id: ids[0], day: "Mon", start: "09:30", end: "12:30", topic: "Concepts and labs" },
-  { id: ids[1], day: "Wed", start: "09:30", end: "12:30", topic: "Automation practice" },
-  { id: ids[2], day: "Fri", start: "09:30", end: "12:30", topic: "Review and mocks" },
-];
+function testingWeek(ids: [string, string, string], dates: [string, string, string]): Batch["schedule"] {
+  return [
+    { id: ids[0], date: dates[0], start: "09:30", end: "12:30", topic: "Concepts and labs" },
+    { id: ids[1], date: dates[1], start: "09:30", end: "12:30", topic: "Automation practice" },
+    { id: ids[2], date: dates[2], start: "09:30", end: "12:30", topic: "Review and mocks" },
+  ];
+}
 
 export const seedBatches: Batch[] = [
   {
@@ -111,7 +118,7 @@ export const seedBatches: Batch[] = [
     name: "ST-Sep-2026",
     startsOn: "2026-09-07",
     endsOn: "2026-12-25",
-    schedule: weekdayTesting(["SCH-0001", "SCH-0002", "SCH-0003"]),
+    schedule: testingWeek(["SCH-0001", "SCH-0002", "SCH-0003"], ["2026-09-07", "2026-09-09", "2026-09-11"]),
     staffIds: ["STF-0007", "STF-0008"],
   },
   {
@@ -120,7 +127,7 @@ export const seedBatches: Batch[] = [
     name: "ST-Nov-2026",
     startsOn: "2026-11-02",
     endsOn: "2027-02-19",
-    schedule: weekdayTesting(["SCH-0004", "SCH-0005", "SCH-0006"]),
+    schedule: testingWeek(["SCH-0004", "SCH-0005", "SCH-0006"], ["2026-11-02", "2026-11-04", "2026-11-06"]),
     staffIds: ["STF-0008", "STF-0009"],
   },
   {
@@ -130,8 +137,8 @@ export const seedBatches: Batch[] = [
     startsOn: "2026-10-05",
     endsOn: "2027-02-19",
     schedule: [
-      { id: "SCH-0007", day: "Tue", start: "10:00", end: "13:00", topic: "Frontend" },
-      { id: "SCH-0008", day: "Thu", start: "10:00", end: "13:00", topic: "Backend" },
+      { id: "SCH-0007", date: "2026-10-06", start: "10:00", end: "13:00", topic: "Frontend" },
+      { id: "SCH-0008", date: "2026-10-08", start: "10:00", end: "13:00", topic: "Backend" },
     ],
     staffIds: ["STF-0007"],
   },
@@ -142,8 +149,8 @@ export const seedBatches: Batch[] = [
     startsOn: "2026-11-09",
     endsOn: "2027-01-29",
     schedule: [
-      { id: "SCH-0009", day: "Mon", start: "14:00", end: "17:00", topic: "Tools" },
-      { id: "SCH-0010", day: "Wed", start: "14:00", end: "17:00", topic: "Project clinic" },
+      { id: "SCH-0009", date: "2026-11-09", start: "14:00", end: "17:00", topic: "Tools" },
+      { id: "SCH-0010", date: "2026-11-11", start: "14:00", end: "17:00", topic: "Project clinic" },
     ],
     staffIds: [],
   },
@@ -153,7 +160,7 @@ export const seedBatches: Batch[] = [
     name: "PY-Jan-2027",
     startsOn: "2027-01-04",
     endsOn: "2027-02-26",
-    schedule: [{ id: "SCH-0011", day: "Sat", start: "09:30", end: "13:00", topic: "Weekend class" }],
+    schedule: [{ id: "SCH-0011", date: "2027-01-09", start: "09:30", end: "13:00", topic: "Weekend class" }],
     staffIds: [],
   },
 ];

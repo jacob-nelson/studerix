@@ -40,6 +40,28 @@ export function ExpensesScreen() {
         cell: (info) => formatInr(Number(info.getValue())),
       },
       { accessorKey: "debitedBy", header: "Debited by", sortFn: "text" },
+      {
+        accessorKey: "notes",
+        header: "Notes",
+        sortFn: "text",
+        cell: (info) => <span className="block max-w-48 truncate">{String(info.getValue() || "—")}</span>,
+      },
+      {
+        accessorKey: "invoiceNumber",
+        header: "Invoice",
+        sortFn: "text",
+        cell: (info) => String(info.getValue() || "—"),
+      },
+      {
+        id: "bills",
+        header: "Bills",
+        accessorFn: (expense) => (expense.bills.length === 0 ? "" : String(expense.bills.length)),
+        sortFn: "basic",
+        cell: (info) => {
+          const count = info.row.original.bills.length;
+          return count === 0 ? "—" : count === 1 ? "1 bill" : `${count} bills`;
+        },
+      },
     ],
     [],
   );
@@ -63,7 +85,7 @@ export function ExpensesScreen() {
       <DataTable
         data={rows}
         columns={columns}
-        searchPlaceholder="Search purpose or staff"
+        searchPlaceholder="Search purpose, invoice, notes or staff"
         searchAlign="end"
         toolbar={
           <PeriodFilter period={period} from={from} to={to} onPeriod={setPeriod} onFrom={setFrom} onTo={setTo} />

@@ -7,8 +7,31 @@ import { StatusBadge } from "@/components/status-badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, formatInr } from "@/lib/format";
 import { canRecordFees } from "@/lib/permissions";
-import { balanceAmount, paidAmount, scheduleAmounts } from "@/lib/records";
+import { balanceAmount, instalmentTimings, paidAmount, scheduleAmounts, type InstalmentTiming } from "@/lib/records";
 import { useAcademy } from "@/lib/store";
+
+function timingLabel(timing: InstalmentTiming, days: number | null) {
+  if (timing === "paid") return "Paid";
+  if (timing === "overdue") return "Overdue";
+  if (timing === "due-soon") {
+    if (days === 0) return "Due today";
+    if (days === 1) return "Due tomorrow";
+    return "Due soon";
+  }
+  return "";
+}
+
+function timingNote(part: { label: string; outstanding: number; days: number | null; timing: InstalmentTiming }) {
+  if (part.timing === "overdue" && part.days !== null) {
+    const late = Math.abs(part.days);
+    return `${part.label} is overdue by ${late === 1 ? "1 day" : `${late} days`}. ${formatInr(part.outstanding)} is still unpaid.`;
+  }
+  if (part.timing === "due-soon" && part.days !== null) {
+    const when = part.days === 0 ? "today" : part.days === 1 ? "tomorrow" : `in ${part.days} days`;
+    return `${part.label} is due ${when}. ${formatInr(part.outstanding)} is still unpaid.`;
+  }
+  return "";
+}
 
 export function AdmissionFees({ id }: { id: string }) {
   const data = useAcademy();
@@ -17,6 +40,7 @@ export function AdmissionFees({ id }: { id: string }) {
 
   const paid = paidAmount(admission.instalments);
   const balance = balanceAmount(admission.agreedFee, admission.instalments);
+  const schedule = instalmentTimings(scheduleAmounts(admission.agreedFee, admission.feeSchedule), paid);
   const width = admission.agreedFee > 0 ? Math.min(100, Math.max(0, (paid / admission.agreedFee) * 100)) : 0;
   const fees = canRecordFees(data.user.role, data.permissions);
 
@@ -87,23 +111,47 @@ export function AdmissionFees({ id }: { id: string }) {
           <CardTitle>Payment schedule</CardTitle>
           <CardDescription>{admission.feePlanName || "No plan was chosen for this admission."}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="grid gap-3">
           {admission.feeSchedule.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Fee plans are defined on the course. Choose one when the student is admitted.
             </p>
           ) : (
-            <ul className="grid gap-2">
-              {scheduleAmounts(admission.agreedFee, admission.feeSchedule).map((part) => (
-                <li key={`${part.label}-${part.percent}`} className="flex items-center justify-between gap-3 text-sm">
-                  <span>
-                    {part.label}
-                    <span className="ml-2 text-muted-foreground">{part.percent}%</span>
-                  </span>
-                  <span className="tabular-nums">{formatInr(part.amount)}</span>
-                </li>
-              ))}
-            </ul>
+            <>
+              {schedule
+                .filter((part) => part.timing === "overdue" || part.timing === "due-soon")
+                .sort((a, b) => (a.timing === b.timing ? (a.days ?? 0) - (b.days ?? 0) : a.timing === "overdue" ? -1 : 1))
+                .map((part) => (
+                  <p
+                    key={`${part.label}-${part.timing}`}
+                    className={
+                      part.timing === "overdue"
+                        ? "rounded-lg bg-rose-100 px-3 py-2 text-sm text-rose-900"
+                        : "rounded-lg bg-amber-100 px-3 py-2 text-sm text-amber-950"
+                    }
+                  >
+                    {timingNote(part)}
+                  </p>
+                ))}
+              <ul className="grid gap-2">
+                {schedule.map((part) => {
+                  const label = timingLabel(part.timing, part.days);
+                  return (
+                    <li key={`${part.label}-${part.percent}`} className="flex items-center justify-between gap-3 text-sm">
+                      <span>
+                        {part.label}
+                        <span className="ml-2 text-muted-foreground">{part.percent}%</span>
+                        {part.dueOn ? <span className="ml-2 text-muted-foreground">Due {formatDate(part.dueOn)}</span> : null}
+                      </span>
+                      <span className="flex items-center gap-2">
+                        {label ? <StatusBadge value={label} /> : null}
+                        <span className="tabular-nums">{formatInr(part.amount)}</span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
           )}
         </CardContent>
       </Card>

@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { isoDate } from "@/lib/dates";
 import { scheduleAmounts } from "@/lib/records";
-import { formatInr } from "@/lib/format";
+import { formatDate, formatInr } from "@/lib/format";
 import { canManageAdmissions } from "@/lib/permissions";
 import { directAdmissionSchema, type DirectAdmissionInput } from "@/lib/schemas";
 import { useAcademy } from "@/lib/store";
@@ -285,7 +285,7 @@ export function AdmissionFormScreen() {
               hint={
                 plan && Number.isFinite(agreedFee)
                   ? scheduleAmounts(agreedFee, plan.parts)
-                      .map((part) => `${part.label} ${part.percent}% (${formatInr(part.amount)})`)
+                      .map((part) => `${part.label} ${part.percent}% due ${formatDate(part.dueOn)} (${formatInr(part.amount)})`)
                       .join(" · ")
                   : undefined
               }

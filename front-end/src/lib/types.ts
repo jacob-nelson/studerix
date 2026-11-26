@@ -74,9 +74,6 @@ export const BATCHES = [
   "PY-Jan-2027",
 ] as const;
 
-export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
-export type Weekday = (typeof WEEKDAYS)[number];
-
 export const ADMISSION_STATUSES = ["Active", "Completed", "Discontinued"] as const;
 export type AdmissionStatus = (typeof ADMISSION_STATUSES)[number];
 
@@ -113,6 +110,22 @@ export interface AttendanceEntry {
   batchId: string;
   status: AttendanceMark;
   note: string;
+}
+
+export interface TestResult {
+  admissionId: string;
+  marks: number;
+  remarks: string;
+}
+
+export interface BatchTest {
+  id: string;
+  batchId: string;
+  title: string;
+  conductedOn: string;
+  staffId: string;
+  maxMarks: number;
+  results: TestResult[];
 }
 
 export type ModuleKey =
@@ -164,6 +177,7 @@ export interface SyllabusTopic {
 export interface FeePart {
   label: string;
   percent: number;
+  dueOn: string;
 }
 
 export interface FeePlan {
@@ -174,7 +188,7 @@ export interface FeePlan {
 
 export interface ClassSlot {
   id: string;
-  day: Weekday;
+  date: string;
   start: string;
   end: string;
   topic: string;
@@ -221,12 +235,21 @@ export interface Admission {
   attendance: AttendanceEntry[];
 }
 
+export interface BillFile {
+  name: string;
+  type: string;
+  dataUrl: string;
+}
+
 export interface Expense {
   id: string;
   date: string;
   purpose: string;
   amount: number;
   debitedBy: string;
+  invoiceNumber: string;
+  notes: string;
+  bills: BillFile[];
 }
 
 export interface InternalPlacement {
@@ -254,6 +277,13 @@ export interface ConsultancyCandidate {
   collections: LedgerEntry[];
 }
 
+export interface StaffAttendance {
+  id: string;
+  date: string;
+  status: AttendanceMark;
+  note: string;
+}
+
 export interface StaffUser {
   id: string;
   name: string;
@@ -262,6 +292,15 @@ export interface StaffUser {
   role: Role;
   active: boolean;
   password: string;
+  photo: string;
+  contact: string;
+  gender: Gender | "";
+  bloodGroup: BloodGroup | "";
+  qualifications: string[];
+  joinedOn: string;
+  relievedOn: string;
+  address: string;
+  attendance: StaffAttendance[];
 }
 
 export interface AuditEvent {
@@ -284,5 +323,6 @@ export interface AcademyData {
   placements: InternalPlacement[];
   consultancy: ConsultancyCandidate[];
   staff: StaffUser[];
+  tests: BatchTest[];
   audit: AuditEvent[];
 }

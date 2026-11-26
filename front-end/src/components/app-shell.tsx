@@ -7,6 +7,7 @@ import {
   BarChart3,
   BookOpen,
   Briefcase,
+  ClipboardList,
   GraduationCap,
   Inbox,
   LayoutDashboard,
@@ -61,8 +62,12 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <nav className="grid gap-1 px-3">
-      {NAV_ITEMS.filter((item) => accessLevel(user.role, item.module, permissions) !== "none").map((item) => {
-        const Icon = ICONS[item.module];
+      {NAV_ITEMS.filter(
+        (item) =>
+          (!item.roles || item.roles.includes(user.role)) &&
+          accessLevel(user.role, item.module, permissions) !== "none",
+      ).map((item) => {
+        const Icon = item.href === "/tests" ? ClipboardList : ICONS[item.module];
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
           <Link

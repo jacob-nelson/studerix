@@ -29,6 +29,12 @@ export function AdmissionShell({ id, children }: { id: string; children: ReactNo
     { href: base, label: "Student", exact: true },
     { href: `${base}/fees`, label: "Fees", exact: false },
     { href: `${base}/attendance`, label: "Attendance", exact: false, count: admission.attendance.length },
+    {
+      href: `${base}/tests`,
+      label: "Tests",
+      exact: false,
+      count: data.tests.filter((test) => test.results.some((result) => result.admissionId === admission.id)).length,
+    },
   ];
 
   return (

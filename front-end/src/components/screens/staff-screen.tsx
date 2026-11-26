@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Save, Shield } from "lucide-react";
 import { toast } from "sonner";
 
@@ -15,6 +16,7 @@ import { ROLES, type ModuleKey, type Role, type StaffUser } from "@/lib/types";
 
 export function StaffScreen() {
   const data = useAcademy();
+  const router = useRouter();
   const level = data.user ? accessLevel(data.user.role, "staff", data.permissions) : "none";
 
   const columns = useMemo<AppColumn<StaffUser>[]>(
@@ -65,7 +67,14 @@ export function StaffScreen() {
 
   if (level === "none" || !data.user) return null;
 
-  return <DataTable data={data.staff} columns={columns} searchPlaceholder="Search staff" />;
+  return (
+    <DataTable
+      data={data.staff}
+      columns={columns}
+      searchPlaceholder="Search staff"
+      onRowClick={(person) => router.push(`/staff/${person.id}`)}
+    />
+  );
 }
 
 type PermissionRow =

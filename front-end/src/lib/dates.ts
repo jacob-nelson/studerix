@@ -8,6 +8,22 @@ export function yearsOfAge(iso: string, now = new Date()) {
   return age >= 0 ? age : null;
 }
 
+export function daysUntil(iso: string, now = new Date()) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+  const [year, month, day] = iso.split("-").map(Number);
+  const due = Date.UTC(year, month - 1, day);
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((due - today) / 86_400_000);
+}
+
+const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
+export function weekdayLabel(iso: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "";
+  const [year, month, day] = iso.split("-").map(Number);
+  return WEEKDAY_LABELS[new Date(year, month - 1, day).getDay()];
+}
+
 export function isoDate(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");

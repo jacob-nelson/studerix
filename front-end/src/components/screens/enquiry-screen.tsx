@@ -345,7 +345,7 @@ function JoinDialog({
             hint={
               plan && Number.isFinite(agreedFee)
                 ? scheduleAmounts(agreedFee, plan.parts)
-                    .map((part) => `${part.label} ${part.percent}% (${formatInr(part.amount)})`)
+                    .map((part) => `${part.label} ${part.percent}% due ${formatDate(part.dueOn)} (${formatInr(part.amount)})`)
                     .join(" · ")
                 : undefined
             }

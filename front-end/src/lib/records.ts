@@ -1,3 +1,4 @@
+import { daysUntil } from "@/lib/dates";
 import type {
   AcademyData,
   Admission,
@@ -6,6 +7,15 @@ import type {
   LedgerEntry,
   StudentProfile,
 } from "@/lib/types";
+
+export const DUE_SOON_DAYS = 7;
+
+export function testStanding(conductedOn: string, now = new Date()) {
+  const days = daysUntil(conductedOn, now);
+  return days !== null && days > 0 ? "Upcoming" : "Conducted";
+}
+
+export type InstalmentTiming = "paid" | "overdue" | "due-soon" | "scheduled";
 
 export function blankProfile(): StudentProfile {
   return {
@@ -53,6 +63,33 @@ export function scheduleAmounts(fee: number, parts: FeePart[]) {
     used += amount;
     return { ...part, amount };
   });
+}
+
+export function instalmentTimings<T extends FeePart & { amount: number }>(
+  parts: T[],
+  paid: number,
+  now = new Date(),
+) {
+  const order = parts
+    .map((part, index) => ({ part, index }))
+    .sort(
+      (a, b) =>
+        (a.part.dueOn || "9999-12-31").localeCompare(b.part.dueOn || "9999-12-31") || a.index - b.index,
+    );
+  const timings: Array<T & { outstanding: number; days: number | null; timing: InstalmentTiming }> = [];
+  let remaining = Math.max(0, paid);
+  for (const { part, index } of order) {
+    const covered = Math.min(part.amount, remaining);
+    remaining -= covered;
+    const outstanding = part.amount - covered;
+    const days = part.dueOn ? daysUntil(part.dueOn, now) : null;
+    let timing: InstalmentTiming = "scheduled";
+    if (outstanding <= 0) timing = "paid";
+    else if (days !== null && days < 0) timing = "overdue";
+    else if (days !== null && days <= DUE_SOON_DAYS) timing = "due-soon";
+    timings[index] = { ...part, outstanding, days, timing };
+  }
+  return timings;
 }
 
 export function nextId(prefix: string, ids: string[]) {
