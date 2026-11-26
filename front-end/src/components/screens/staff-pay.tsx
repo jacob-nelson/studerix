@@ -33,6 +33,7 @@ export function StaffPay({ person, canWrite }: { person: StaffUser; canWrite: bo
   const data = useAcademy();
   const actor = data.user?.name ?? "";
   const [editingBank, setEditingBank] = useState(false);
+  const [revising, setRevising] = useState(false);
   const today = isoDate(new Date());
   const month = today.slice(0, 7);
   const offered = currentRevision(person.revisions, today);
@@ -165,9 +166,9 @@ export function StaffPay({ person, canWrite }: { person: StaffUser; canWrite: bo
       <Card>
         <CardHeader>
           <CardTitle>Salary</CardTitle>
-          <CardDescription>Offered salary, later revisions, and each transfer.</CardDescription>
+          <CardDescription>The salary offered now, and how much has been transferred.</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-6">
+        <CardContent>
           <dl className="grid gap-4 sm:grid-cols-2">
             <div>
               <dt className="text-xs text-muted-foreground">Offered</dt>
@@ -194,140 +195,176 @@ export function StaffPay({ person, canWrite }: { person: StaffUser; canWrite: bo
               <dd className="text-sm">{formatInr(totalPaid)}</dd>
             </div>
           </dl>
+        </CardContent>
+      </Card>
 
-          <div className="grid gap-3">
-            <p className="text-sm font-medium">Revisions</p>
-            {canWrite ? (
-              <form
-                className="grid gap-3 border-b pb-4"
-                noValidate
-                onSubmit={revisionForm.handleSubmit((values) => {
-                  const result = data.reviseStaffSalary(person.id, values, actor);
-                  if (!result.ok) {
-                    toast.error(result.message);
-                    return;
-                  }
-                  toast.success("Salary revised");
+      <Card>
+        <CardHeader>
+          <CardTitle>Revisions</CardTitle>
+          <CardDescription>Each change to the offered salary.</CardDescription>
+          {canWrite && !revising ? (
+            <CardAction>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
                   revisionForm.reset({ effectiveOn: today, amount: undefined as unknown as number, reason: "" });
-                })}
+                  setRevising(true);
+                }}
               >
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="New salary" htmlFor="revision-amount" error={revisionForm.formState.errors.amount?.message}>
-                    <Input
-                      id="revision-amount"
-                      type="number"
-                      min={1}
-                      className={plainNumber}
-                      {...revisionForm.register("amount", { valueAsNumber: true })}
-                    />
-                  </Field>
-                  <Field label="Effective from" error={revisionForm.formState.errors.effectiveOn?.message}>
-                    <Controller
-                      control={revisionForm.control}
-                      name="effectiveOn"
-                      render={({ field }) => (
-                        <DateField label="Effective from" value={field.value} onChange={field.onChange} />
-                      )}
-                    />
-                  </Field>
-                </div>
-                <Field label="Reason" htmlFor="revision-reason" error={revisionForm.formState.errors.reason?.message}>
-                  <Input id="revision-reason" {...revisionForm.register("reason")} />
+                Revise
+              </Button>
+            </CardAction>
+          ) : null}
+        </CardHeader>
+        <CardContent className="grid gap-3">
+          {revising ? (
+            <form
+              className="grid gap-3 border-b pb-4"
+              noValidate
+              onSubmit={revisionForm.handleSubmit((values) => {
+                const result = data.reviseStaffSalary(person.id, values, actor);
+                if (!result.ok) {
+                  toast.error(result.message);
+                  return;
+                }
+                toast.success("Salary revised");
+                revisionForm.reset({ effectiveOn: today, amount: undefined as unknown as number, reason: "" });
+                setRevising(false);
+              })}
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="New salary" htmlFor="revision-amount" error={revisionForm.formState.errors.amount?.message}>
+                  <Input
+                    id="revision-amount"
+                    type="number"
+                    min={1}
+                    className={plainNumber}
+                    {...revisionForm.register("amount", { valueAsNumber: true })}
+                  />
                 </Field>
-                <div className="flex justify-end">
-                  <Button type="submit" className="w-fit">
-                    Revise
-                  </Button>
-                </div>
-              </form>
-            ) : null}
-            <DataTable
-              data={[...person.revisions].sort((a, b) => b.effectiveOn.localeCompare(a.effectiveOn))}
-              columns={revisionColumns}
-              searchPlaceholder="Search revisions"
-            />
-          </div>
+                <Field label="Effective from" error={revisionForm.formState.errors.effectiveOn?.message}>
+                  <Controller
+                    control={revisionForm.control}
+                    name="effectiveOn"
+                    render={({ field }) => (
+                      <DateField label="Effective from" value={field.value} onChange={field.onChange} />
+                    )}
+                  />
+                </Field>
+              </div>
+              <Field label="Reason" htmlFor="revision-reason" error={revisionForm.formState.errors.reason?.message}>
+                <Input id="revision-reason" {...revisionForm.register("reason")} />
+              </Field>
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    revisionForm.reset({ effectiveOn: today, amount: undefined as unknown as number, reason: "" });
+                    setRevising(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" className="w-fit">
+                  Revise
+                </Button>
+              </div>
+            </form>
+          ) : null}
+          <DataTable
+            data={[...person.revisions].sort((a, b) => b.effectiveOn.localeCompare(a.effectiveOn))}
+            columns={revisionColumns}
+            searchPlaceholder="Search revisions"
+          />
+        </CardContent>
+      </Card>
 
-          <div className="grid gap-3">
-            <p className="text-sm font-medium">Transferred</p>
-            {canWrite ? (
-              <form
-                className="grid gap-3 border-b pb-4"
-                noValidate
-                onSubmit={transferForm.handleSubmit((values) => {
-                  const result = data.recordSalaryTransfer(person.id, values, actor);
-                  if (!result.ok) {
-                    toast.error(result.message);
-                    return;
-                  }
-                  toast.success("Salary transferred");
-                  transferForm.reset({
-                    paidOn: today,
-                    period: month,
-                    amount: offered?.amount ?? (undefined as unknown as number),
-                    mode: "Bank transfer",
-                    reference: "",
-                    note: "",
-                  });
-                })}
-              >
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Paid on" error={transferForm.formState.errors.paidOn?.message}>
-                    <Controller
-                      control={transferForm.control}
-                      name="paidOn"
-                      render={({ field }) => <DateField label="Paid on" value={field.value} onChange={field.onChange} />}
-                    />
-                  </Field>
-                  <Field label="Salary for" htmlFor="salary-period" error={transferForm.formState.errors.period?.message}>
-                    <Input id="salary-period" type="month" {...transferForm.register("period")} />
-                  </Field>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Amount" htmlFor="transfer-amount" error={transferForm.formState.errors.amount?.message}>
-                    <Input
-                      id="transfer-amount"
-                      type="number"
-                      min={1}
-                      className={plainNumber}
-                      {...transferForm.register("amount", { valueAsNumber: true })}
-                    />
-                  </Field>
-                  <Field label="Paid by" error={transferForm.formState.errors.mode?.message}>
-                    <Controller
-                      control={transferForm.control}
-                      name="mode"
-                      render={({ field }) => (
-                        <OptionSelect value={field.value} onChange={field.onChange} options={PAYMENT_MODES} />
-                      )}
-                    />
-                  </Field>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Reference" htmlFor="transfer-reference" error={transferForm.formState.errors.reference?.message}>
-                    <Input id="transfer-reference" {...transferForm.register("reference")} />
-                  </Field>
-                  <Field label="Note" htmlFor="transfer-note" error={transferForm.formState.errors.note?.message}>
-                    <Input id="transfer-note" {...transferForm.register("note")} />
-                  </Field>
-                </div>
-                <div className="flex justify-end">
-                  <Button type="submit" className="w-fit">
-                    Record transfer
-                  </Button>
-                </div>
-              </form>
-            ) : null}
-            {person.transfers.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No salary transferred yet.</p>
-            ) : (
-              <DataTable
-                data={[...person.transfers].sort((a, b) => b.paidOn.localeCompare(a.paidOn) || b.period.localeCompare(a.period))}
-                columns={transferColumns}
-                searchPlaceholder="Search transfers"
-              />
-            )}
-          </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Transfers</CardTitle>
+          <CardDescription>Each amount paid out.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3">
+          {canWrite ? (
+            <form
+              className="grid gap-3 border-b pb-4"
+              noValidate
+              onSubmit={transferForm.handleSubmit((values) => {
+                const result = data.recordSalaryTransfer(person.id, values, actor);
+                if (!result.ok) {
+                  toast.error(result.message);
+                  return;
+                }
+                toast.success("Salary transferred");
+                transferForm.reset({
+                  paidOn: today,
+                  period: month,
+                  amount: offered?.amount ?? (undefined as unknown as number),
+                  mode: "Bank transfer",
+                  reference: "",
+                  note: "",
+                });
+              })}
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Paid on" error={transferForm.formState.errors.paidOn?.message}>
+                  <Controller
+                    control={transferForm.control}
+                    name="paidOn"
+                    render={({ field }) => <DateField label="Paid on" value={field.value} onChange={field.onChange} />}
+                  />
+                </Field>
+                <Field label="Salary for" htmlFor="salary-period" error={transferForm.formState.errors.period?.message}>
+                  <Input id="salary-period" type="month" {...transferForm.register("period")} />
+                </Field>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Amount" htmlFor="transfer-amount" error={transferForm.formState.errors.amount?.message}>
+                  <Input
+                    id="transfer-amount"
+                    type="number"
+                    min={1}
+                    className={plainNumber}
+                    {...transferForm.register("amount", { valueAsNumber: true })}
+                  />
+                </Field>
+                <Field label="Paid by" error={transferForm.formState.errors.mode?.message}>
+                  <Controller
+                    control={transferForm.control}
+                    name="mode"
+                    render={({ field }) => (
+                      <OptionSelect value={field.value} onChange={field.onChange} options={PAYMENT_MODES} />
+                    )}
+                  />
+                </Field>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Reference" htmlFor="transfer-reference" error={transferForm.formState.errors.reference?.message}>
+                  <Input id="transfer-reference" {...transferForm.register("reference")} />
+                </Field>
+                <Field label="Note" htmlFor="transfer-note" error={transferForm.formState.errors.note?.message}>
+                  <Input id="transfer-note" {...transferForm.register("note")} />
+                </Field>
+              </div>
+              <div className="flex justify-end">
+                <Button type="submit" className="w-fit">
+                  Record transfer
+                </Button>
+              </div>
+            </form>
+          ) : null}
+          {person.transfers.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No salary transferred yet.</p>
+          ) : (
+            <DataTable
+              data={[...person.transfers].sort((a, b) => b.paidOn.localeCompare(a.paidOn) || b.period.localeCompare(a.period))}
+              columns={transferColumns}
+              searchPlaceholder="Search transfers"
+            />
+          )}
         </CardContent>
       </Card>
 
