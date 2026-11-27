@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/page-header";
 import { PeriodFilter } from "@/components/period-filter";
 import { AccessDenied } from "@/components/states";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { inPeriod, periodBounds, type Period } from "@/lib/dates";
 import { formatDate, formatInr } from "@/lib/format";
 import { accessLevel } from "@/lib/permissions";
@@ -20,6 +21,7 @@ export function ExpensesScreen() {
   const [period, setPeriod] = useState<Period>("month");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [query, setQuery] = useState("");
   const bounds = periodBounds(period, from, to);
   const rows = expenses.filter((expense) => inPeriod(expense.date, bounds.from, bounds.to));
   const total = rows.reduce((sum, expense) => sum + expense.amount, 0);
@@ -75,20 +77,31 @@ export function ExpensesScreen() {
         title="Expenses"
         description={`${formatInr(total)} in this period. Debited by is the staff member who approved or paid it.`}
         actions={
-          level === "write" ? (
-            <Button asChild>
-              <Link href="/expenses/new">New expense</Link>
-            </Button>
-          ) : null
+          <div className="grid w-full justify-items-end gap-2 sm:w-80">
+            {level === "write" ? (
+              <Button asChild>
+                <Link href="/expenses/new">New expense</Link>
+              </Button>
+            ) : null}
+            <Input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search purpose, invoice, notes or staff"
+              aria-label="Search purpose, invoice, notes or staff"
+              className="w-full bg-card"
+            />
+          </div>
         }
       />
       <DataTable
         data={rows}
         columns={columns}
-        searchPlaceholder="Search purpose, invoice, notes or staff"
-        searchAlign="end"
+        hideSearch
+        filter={query}
         toolbar={
-          <PeriodFilter period={period} from={from} to={to} onPeriod={setPeriod} onFrom={setFrom} onTo={setTo} />
+          <div className="ml-auto">
+            <PeriodFilter period={period} from={from} to={to} onPeriod={setPeriod} onFrom={setFrom} onTo={setTo} />
+          </div>
         }
         initialSorting={[{ id: "date", desc: true }]}
       />
