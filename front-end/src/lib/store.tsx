@@ -33,6 +33,9 @@ import type {
   StudentProfileInput,
   SyllabusInput,
   TestInput,
+  TestMarksInput,
+  TestRemarksInput,
+  TestScheduleInput,
 } from "@/lib/schemas";
 import { createSeed } from "@/lib/seed";
 import type {
@@ -42,6 +45,7 @@ import type {
   AuditEvent,
   Batch,
   BatchTest,
+  TestResult,
   ClassSlot,
   ConsultancyCandidate,
   CourseOffering,
@@ -143,6 +147,7 @@ type Action =
   | { type: "assign-batch"; admission: Admission; enquiry?: Enquiry; audit: AuditEvent }
   | { type: "update-admission"; admission: Admission; audit: AuditEvent }
   | { type: "add-test"; test: BatchTest; audit: AuditEvent }
+  | { type: "update-test"; test: BatchTest; audit: AuditEvent }
   | { type: "remove-test"; testId: string; audit: AuditEvent };
 
 function reducer(state: AcademyState, action: Action): AcademyState {
@@ -424,6 +429,12 @@ function reducer(state: AcademyState, action: Action): AcademyState {
         tests: [action.test, ...state.tests],
         audit: [action.audit, ...state.audit],
       };
+    case "update-test":
+      return {
+        ...state,
+        tests: state.tests.map((test) => (test.id === action.test.id ? action.test : test)),
+        audit: [action.audit, ...state.audit],
+      };
     case "remove-test":
       return {
         ...state,
@@ -558,6 +569,10 @@ interface AcademyContextValue extends AcademyState {
   recordAttendance: (admissionId: string, input: AttendanceInput, actor: string) => Success | Failure;
   removeAttendance: (admissionId: string, entryId: string, actor: string) => Success | Failure;
   recordTest: (batchId: string, input: TestInput, actor: string) => Success | Failure;
+  updateTestMarks: (testId: string, input: TestMarksInput, actor: string) => Success | Failure;
+  rescheduleTest: (testId: string, input: TestScheduleInput, actor: string) => Success | Failure;
+  setTestCancelled: (testId: string, cancelled: boolean, actor: string) => Success | Failure;
+  updateTestRemarks: (testId: string, input: TestRemarksInput, actor: string) => Success | Failure;
   removeTest: (testId: string, actor: string) => Success | Failure;
 }
 
@@ -1641,18 +1656,6 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
         ) {
           return { ok: false, message: "Choose a teaching staff member assigned to this batch." };
         }
-        const onThisBatch = state.admissions.filter((admission) => onBatch(admission, batch.id));
-        const covered = new Set(input.results.map((result) => result.admissionId));
-        if (
-          onThisBatch.length === 0 ||
-          onThisBatch.some((admission) => !covered.has(admission.id)) ||
-          input.results.some((result) => !onThisBatch.some((admission) => admission.id === result.admissionId))
-        ) {
-          return { ok: false, message: "Record a mark for every student on this batch." };
-        }
-        if (input.results.some((result) => result.marks > input.maxMarks)) {
-          return { ok: false, message: "A mark is higher than the maximum." };
-        }
         const test: BatchTest = {
           id: nextId(
             "TST",
@@ -1663,11 +1666,9 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
           conductedOn: input.conductedOn,
           staffId: conductor.id,
           maxMarks: input.maxMarks,
-          results: input.results.map((result) => ({
-            admissionId: result.admissionId,
-            marks: result.marks,
-            remarks: result.remarks.trim(),
-          })),
+          status: "scheduled",
+          remarks: "",
+          results: [],
         };
         dispatch({
           type: "add-test",
@@ -1679,6 +1680,102 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
             "Test recorded",
             `${test.title} on ${batch.name}, conducted by ${conductor.name}.`,
           ),
+        });
+        return { ok: true };
+      },
+      updateTestMarks: (testId, input, actor) => {
+        const test = state.tests.find((item) => item.id === testId);
+        const batch = test ? state.batches.find((item) => item.id === test.batchId) : undefined;
+        if (!test || !batch) return { ok: false, message: "That test is no longer on this batch." };
+        if (test.status === "cancelled") {
+          return { ok: false, message: "This test is cancelled. Restore it before entering marks." };
+        }
+        const onThisBatch = new Set(
+          state.admissions.filter((admission) => onBatch(admission, batch.id)).map((admission) => admission.id),
+        );
+        if (input.results.some((result) => !onThisBatch.has(result.admissionId))) {
+          return { ok: false, message: "Marks can only be saved for students on this batch." };
+        }
+        if (
+          input.results.some(
+            (result) => !result.absent && result.marks !== null && result.marks > test.maxMarks,
+          )
+        ) {
+          return { ok: false, message: "A mark is higher than the maximum." };
+        }
+        const kept = test.results.filter((result) => !onThisBatch.has(result.admissionId));
+        const entered: TestResult[] = input.results.flatMap((result): TestResult[] => {
+          if (result.absent) {
+            return [
+              {
+                admissionId: result.admissionId,
+                absent: true,
+                marks: null,
+                remarks: result.remarks.trim(),
+              },
+            ];
+          }
+          if (result.marks === null) return [];
+          return [
+            {
+              admissionId: result.admissionId,
+              absent: false,
+              marks: result.marks,
+              remarks: result.remarks.trim(),
+            },
+          ];
+        });
+        dispatch({
+          type: "update-test",
+          test: { ...test, results: [...kept, ...entered] },
+          audit: createAudit(state, actor, "Admissions", "Marks updated", `${test.title} on ${batch.name}.`),
+        });
+        return { ok: true };
+      },
+      rescheduleTest: (testId, input, actor) => {
+        const test = state.tests.find((item) => item.id === testId);
+        const batch = test ? state.batches.find((item) => item.id === test.batchId) : undefined;
+        if (!test || !batch) return { ok: false, message: "That test is no longer on this batch." };
+        dispatch({
+          type: "update-test",
+          test: { ...test, conductedOn: input.conductedOn, status: "scheduled" },
+          audit: createAudit(
+            state,
+            actor,
+            "Admissions",
+            "Test rescheduled",
+            `${test.title} on ${batch.name} moved to ${input.conductedOn}.`,
+          ),
+        });
+        return { ok: true };
+      },
+      setTestCancelled: (testId, cancelled, actor) => {
+        const test = state.tests.find((item) => item.id === testId);
+        const batch = test ? state.batches.find((item) => item.id === test.batchId) : undefined;
+        if (!test || !batch) return { ok: false, message: "That test is no longer on this batch." };
+        const status = cancelled ? "cancelled" : "scheduled";
+        if (test.status === status) return { ok: true };
+        dispatch({
+          type: "update-test",
+          test: { ...test, status },
+          audit: createAudit(
+            state,
+            actor,
+            "Admissions",
+            cancelled ? "Test cancelled" : "Test restored",
+            `${test.title} on ${batch.name} was ${cancelled ? "cancelled" : "restored"}.`,
+          ),
+        });
+        return { ok: true };
+      },
+      updateTestRemarks: (testId, input, actor) => {
+        const test = state.tests.find((item) => item.id === testId);
+        const batch = test ? state.batches.find((item) => item.id === test.batchId) : undefined;
+        if (!test || !batch) return { ok: false, message: "That test is no longer on this batch." };
+        dispatch({
+          type: "update-test",
+          test: { ...test, remarks: input.remarks.trim() },
+          audit: createAudit(state, actor, "Admissions", "Test remarks updated", `${test.title} on ${batch.name}.`),
         });
         return { ok: true };
       },

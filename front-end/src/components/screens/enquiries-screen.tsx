@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 
 import { DataTable, type AppColumn } from "@/components/data-table";
 import { OptionSelect } from "@/components/forms/option-select";
-import { PageHeader } from "@/components/page-header";
+import { HeaderSearch, PageHeader } from "@/components/page-header";
 import { AccessDenied } from "@/components/states";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ export function EnquiriesScreen() {
   const router = useRouter();
   const [status, setStatus] = useState("all");
   const [course, setCourse] = useState("all");
+  const [query, setQuery] = useState("");
   const level = user ? accessLevel(user.role, "enquiries", permissions) : "none";
 
   const rows = useMemo(
@@ -91,19 +92,27 @@ export function EnquiriesScreen() {
         title="Enquiry register"
         description="Search by student, phone, course or status. Open a row to follow up or mark them Joined."
         actions={
-          level === "write" ? (
-            <Button asChild>
-              <Link href="/enquiries/new">New enquiry</Link>
-            </Button>
-          ) : null
+          <HeaderSearch
+            action={
+              level === "write" ? (
+                <Button asChild>
+                  <Link href="/enquiries/new">New enquiry</Link>
+                </Button>
+              ) : null
+            }
+            value={query}
+            onChange={setQuery}
+            placeholder="Search enquiries"
+          />
         }
       />
       <DataTable
         data={rows}
         columns={columns}
-        searchPlaceholder="Search enquiries"
+        hideSearch
+        filter={query}
         toolbar={
-          <>
+          <div className="ml-auto flex flex-wrap justify-end gap-2">
             <OptionSelect
               className="w-44"
               value={status}
@@ -119,7 +128,7 @@ export function EnquiriesScreen() {
                 ...courses.map((item) => item.name),
               ]}
             />
-          </>
+          </div>
         }
         initialSorting={[{ id: "enquiryDate", desc: true }]}
         onRowClick={(row) => router.push(`/enquiries/${row.id}`)}

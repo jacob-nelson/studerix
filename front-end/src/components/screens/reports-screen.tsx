@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { DataTable, type AppColumn } from "@/components/data-table";
-import { PageHeader } from "@/components/page-header";
+import { HeaderSearch, PageHeader } from "@/components/page-header";
 import { PeriodFilter } from "@/components/period-filter";
 import { AccessDenied } from "@/components/states";
 import { StatusBadge } from "@/components/status-badge";
@@ -17,33 +17,6 @@ import { accessLevel, canExport } from "@/lib/permissions";
 import { paymentRows, studentForAdmission } from "@/lib/records";
 import { useAcademy } from "@/lib/store";
 
-function ReportFilters({
-  period,
-  from,
-  to,
-  onPeriod,
-  onFrom,
-  onTo,
-}: {
-  period: Period;
-  from: string;
-  to: string;
-  onPeriod: (period: Period) => void;
-  onFrom: (value: string) => void;
-  onTo: (value: string) => void;
-}) {
-  return (
-    <>
-      <PeriodFilter period={period} from={from} to={to} onPeriod={onPeriod} onFrom={onFrom} onTo={onTo} />
-      <TabsList>
-        <TabsTrigger value="collections">Collections</TabsTrigger>
-        <TabsTrigger value="admissions">Admissions</TabsTrigger>
-        <TabsTrigger value="placements">Placements</TabsTrigger>
-      </TabsList>
-    </>
-  );
-}
-
 export function ReportsScreen() {
   const data = useAcademy();
   const level = data.user ? accessLevel(data.user.role, "reports", data.permissions) : "none";
@@ -51,6 +24,9 @@ export function ReportsScreen() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [tab, setTab] = useState("collections");
+  const [query, setQuery] = useState("");
+  const searchPlaceholder =
+    tab === "collections" ? "Search payments" : tab === "admissions" ? "Search admissions" : "Search placements";
   const bounds = periodBounds(period, from, to);
   const allowed = data.user ? canExport(data.user.role, data.exportRoles) : false;
 
@@ -187,38 +163,35 @@ export function ReportsScreen() {
         title="Collections, admissions and placements"
         description="Choose a period, then export the visible rows. Export is limited to finance, management and administrators."
         actions={
-          <Button type="button" variant="outline" disabled={!allowed} onClick={exportCurrent}>
-            Export CSV
-          </Button>
+          <HeaderSearch
+            action={
+              <Button type="button" variant="outline" disabled={!allowed} onClick={exportCurrent}>
+                Export CSV
+              </Button>
+            }
+            value={query}
+            onChange={setQuery}
+            placeholder={searchPlaceholder}
+          />
         }
       />
-      <Tabs value={tab} onValueChange={setTab}>
+      <Tabs value={tab} onValueChange={setTab} className="gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <PeriodFilter period={period} from={from} to={to} onPeriod={setPeriod} onFrom={setFrom} onTo={setTo} />
+          <TabsList>
+            <TabsTrigger value="collections">Collections</TabsTrigger>
+            <TabsTrigger value="admissions">Admissions</TabsTrigger>
+            <TabsTrigger value="placements">Placements</TabsTrigger>
+          </TabsList>
+        </div>
         <TabsContent value="collections">
-          <DataTable
-            data={collections}
-            columns={collectionColumns}
-            searchPlaceholder="Search payments"
-            searchAlign="end"
-            toolbar={<ReportFilters period={period} from={from} to={to} onPeriod={setPeriod} onFrom={setFrom} onTo={setTo} />}
-          />
+          <DataTable data={collections} columns={collectionColumns} hideSearch filter={query} />
         </TabsContent>
         <TabsContent value="admissions">
-          <DataTable
-            data={admissions}
-            columns={admissionColumns}
-            searchPlaceholder="Search admissions"
-            searchAlign="end"
-            toolbar={<ReportFilters period={period} from={from} to={to} onPeriod={setPeriod} onFrom={setFrom} onTo={setTo} />}
-          />
+          <DataTable data={admissions} columns={admissionColumns} hideSearch filter={query} />
         </TabsContent>
         <TabsContent value="placements">
-          <DataTable
-            data={placements}
-            columns={placementColumns}
-            searchPlaceholder="Search placements"
-            searchAlign="end"
-            toolbar={<ReportFilters period={period} from={from} to={to} onPeriod={setPeriod} onFrom={setFrom} onTo={setTo} />}
-          />
+          <DataTable data={placements} columns={placementColumns} hideSearch filter={query} />
         </TabsContent>
       </Tabs>
     </div>

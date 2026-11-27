@@ -7,7 +7,6 @@ import {
   BarChart3,
   BookOpen,
   Briefcase,
-  ClipboardList,
   GraduationCap,
   Inbox,
   LayoutDashboard,
@@ -55,6 +54,21 @@ const ICONS: Record<ModuleKey, typeof LayoutDashboard> = {
   audit: ScrollText,
 };
 
+const COURSE_MENU = [
+  { href: "/courses/batches", label: "Batches", exact: false },
+  { href: "/courses/classes", label: "Classes", exact: false },
+  { href: "/courses/tests", label: "Tests", exact: false },
+];
+
+function navClass(active: boolean) {
+  return cn(
+    "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm",
+    active
+      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+      : "text-sidebar-foreground/75 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground",
+  );
+}
+
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { user, permissions } = useAcademy();
@@ -67,20 +81,43 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
           (!item.roles || item.roles.includes(user.role)) &&
           accessLevel(user.role, item.module, permissions) !== "none",
       ).map((item) => {
-        const Icon = item.href === "/tests" ? ClipboardList : ICONS[item.module];
+        const Icon = ICONS[item.module];
+        if (item.href === "/courses") {
+          const onCoursePage = COURSE_MENU.some((section) =>
+            section.exact ? pathname === section.href : pathname.startsWith(section.href),
+          );
+          return (
+            <div key={item.href} className="grid gap-0.5">
+              <Link
+                href="/courses"
+                onClick={onNavigate}
+                className={navClass(pathname.startsWith("/courses") && !onCoursePage)}
+              >
+                <Icon className="size-4" />
+                {item.label}
+              </Link>
+              <div className="grid gap-0.5 pb-1">
+                {COURSE_MENU.map((section) => {
+                  const current = section.exact ? pathname === section.href : pathname.startsWith(section.href);
+                  return (
+                    <Link
+                      key={section.href}
+                      href={section.href}
+                      onClick={onNavigate}
+                      aria-current={current ? "page" : undefined}
+                      className={cn(navClass(current), "py-1.5 pl-10")}
+                    >
+                      {section.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        }
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onNavigate}
-            className={cn(
-              "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm",
-              active
-                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                : "text-sidebar-foreground/75 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground",
-            )}
-          >
+          <Link key={item.href} href={item.href} onClick={onNavigate} className={navClass(active)}>
             <Icon className="size-4" />
             {item.label}
           </Link>

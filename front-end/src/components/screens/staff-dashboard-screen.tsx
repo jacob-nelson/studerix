@@ -60,7 +60,11 @@ export function StaffDashboardScreen() {
         const tally = attendanceTally(marks);
         if (!person.active && tally.marked === 0) return [];
         const tests = data.tests.filter(
-          (test) => test.staffId === person.id && test.conductedOn >= bounds.from && test.conductedOn <= bounds.to,
+          (test) =>
+            test.status !== "cancelled" &&
+            test.staffId === person.id &&
+            test.conductedOn >= bounds.from &&
+            test.conductedOn <= bounds.to,
         ).length;
         const todayMark = marks.find((entry) => entry.date === bounds.from);
         const row: RosterRow = {
@@ -150,7 +154,8 @@ export function StaffDashboardScreen() {
 
   return (
     <div className="grid gap-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+        <p className="text-sm text-muted-foreground sm:mr-auto">{range}</p>
         <div className="flex flex-wrap gap-1 rounded-lg bg-muted p-1">
           {SPANS.map((option) => (
             <button
@@ -166,7 +171,6 @@ export function StaffDashboardScreen() {
             </button>
           ))}
         </div>
-        <p className="text-sm text-muted-foreground">{range}</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-5">
         {cards.map((card) => (

@@ -114,7 +114,6 @@ export const NAV_ITEMS: { href: string; label: string; module: ModuleKey; roles?
   { href: "/enquiries", label: "Enquiries", module: "enquiries" },
   { href: "/courses", label: "Courses", module: "courses" },
   { href: "/admissions", label: "Admissions & fees", module: "admissions" },
-  { href: "/tests", label: "Tests", module: "admissions", roles: ["Administrator"] },
   { href: "/expenses", label: "Expenses", module: "expenses" },
   { href: "/placements", label: "Internal placements", module: "placements" },
   { href: "/consultancy", label: "Consultancy", module: "consultancy" },

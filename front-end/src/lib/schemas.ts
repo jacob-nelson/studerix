@@ -59,37 +59,62 @@ export const attendanceSchema = z.object({
   note: z.string().trim().max(160, "Keep the note within 160 characters"),
 });
 
-export const testSchema = z
+export const testSchema = z.object({
+  title: z.string().trim().min(2, "Enter the test name").max(80, "Keep the name within 80 characters"),
+  conductedOn: z.string().min(1, "Enter the date"),
+  staffId: z.string().min(1, "Choose who conducted the test"),
+  maxMarks: z
+    .number({ error: "Enter the maximum mark" })
+    .int("Use a whole number")
+    .positive("Enter the maximum mark")
+    .max(1000, "Keep the maximum within 1000"),
+});
+
+const optionalMark = z
+  .number({ error: "Enter the mark" })
+  .int("Use a whole number")
+  .nonnegative("Enter the mark")
+  .nullable();
+
+export const testMarksSchema = z
   .object({
-    title: z.string().trim().min(2, "Enter the test name").max(80, "Keep the name within 80 characters"),
-    conductedOn: z.string().min(1, "Enter the date"),
-    staffId: z.string().min(1, "Choose who conducted the test"),
-    maxMarks: z
-      .number({ error: "Enter the maximum mark" })
-      .int("Use a whole number")
-      .positive("Enter the maximum mark")
-      .max(1000, "Keep the maximum within 1000"),
-    results: z
-      .array(
-        z.object({
-          admissionId: z.string().min(1),
-          marks: z.number({ error: "Enter the mark" }).int("Use a whole number").nonnegative("Enter the mark"),
-          remarks: z.string().trim().max(160, "Keep the remark within 160 characters"),
-        }),
-      )
-      .min(1, "Add students to this batch before recording a test"),
+    maxMarks: z.number(),
+    results: z.array(
+      z.object({
+        admissionId: z.string().min(1),
+        absent: z.boolean(),
+        marks: optionalMark,
+        remarks: z.string().trim().max(160, "Keep the remark within 160 characters"),
+      }),
+    ),
   })
   .superRefine((value, ctx) => {
     value.results.forEach((result, index) => {
-      if (result.marks > value.maxMarks) {
+      if (result.absent) return;
+      if (result.marks !== null && result.marks > value.maxMarks) {
         ctx.addIssue({
           code: "custom",
           path: ["results", index, "marks"],
           message: "Mark is higher than the maximum",
         });
       }
+      if (result.marks === null && result.remarks.length > 0) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["results", index, "marks"],
+          message: "Enter the mark or mark the student absent",
+        });
+      }
     });
   });
+
+export const testScheduleSchema = z.object({
+  conductedOn: z.string().min(1, "Enter the date"),
+});
+
+export const testRemarksSchema = z.object({
+  remarks: z.string().trim().max(240, "Keep the remark within 240 characters"),
+});
 
 function rupee(message: string, allowZero = false) {
   const amount = z.number({ error: message });
@@ -409,4 +434,7 @@ export type DirectAdmissionInput = z.infer<typeof directAdmissionSchema>;
 export type StudentProfileInput = z.infer<typeof studentProfileSchema>;
 export type AttendanceInput = z.infer<typeof attendanceSchema>;
 export type TestInput = z.infer<typeof testSchema>;
+export type TestMarksInput = z.infer<typeof testMarksSchema>;
+export type TestScheduleInput = z.infer<typeof testScheduleSchema>;
+export type TestRemarksInput = z.infer<typeof testRemarksSchema>;
 export type DiscontinueInput = z.infer<typeof discontinueSchema>;

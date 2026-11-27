@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { DataTable, type AppColumn } from "@/components/data-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/lib/format";
+import { testMarkLabel } from "@/lib/records";
 import { useAcademy } from "@/lib/store";
 
 interface StudentTestRow {
@@ -41,7 +42,7 @@ export function AdmissionTests({ id }: { id: string }) {
             batch: batch?.name ?? "Batch",
             batchId: test.batchId,
             courseId: batch?.courseId ?? "",
-            mark: `${result.marks}/${test.maxMarks}`,
+            mark: test.status === "cancelled" ? "Cancelled" : testMarkLabel(result, test.maxMarks),
             remarks: result.remarks,
             conductor: conductor?.name ?? "Staff",
           },
@@ -79,7 +80,7 @@ export function AdmissionTests({ id }: { id: string }) {
       <CardHeader>
         <CardTitle>Tests</CardTitle>
         <CardDescription>
-          Marks recorded for this student, with the teaching staff member who conducted each test.
+          Marks and absences recorded for this student, with the teaching staff member who conducted each test.
         </CardDescription>
       </CardHeader>
       <CardContent>

@@ -4,10 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useContext, useState, type ReactNode } from "react";
 
-import { PageHeader } from "@/components/page-header";
+import { HeaderSearch, PageHeader } from "@/components/page-header";
 import { AccessDenied } from "@/components/states";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { cn } from "cn";
 import { accessLevel } from "@/lib/permissions";
 import { useAcademy } from "@/lib/store";
@@ -40,16 +39,23 @@ export function StaffShell({ children }: { children: ReactNode }) {
         title="Staff"
         description="See who is in, who is on leave, and open a person for their attendance and leave history."
         actions={
-          level === "write" ? (
-            <Button asChild>
-              <Link href="/staff/new">Onboard staff</Link>
-            </Button>
-          ) : null
+          <HeaderSearch
+            action={
+              level === "write" ? (
+                <Button asChild>
+                  <Link href="/staff/new">Onboard staff</Link>
+                </Button>
+              ) : null
+            }
+            value={query}
+            onChange={setQuery}
+            placeholder={searchLabel}
+          />
         }
       />
       <StaffSearchContext.Provider value={{ query, setQuery }}>
-      <div className="flex items-end gap-3 border-b">
-      <nav aria-label="Staff sections" className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
+      <div className="flex border-b">
+      <nav aria-label="Staff sections" className="flex min-w-0 gap-1 overflow-x-auto">
         {sections.map((section) => {
           const current = section.exact ? pathname === section.href : pathname.startsWith(section.href);
           return (
@@ -72,13 +78,6 @@ export function StaffShell({ children }: { children: ReactNode }) {
           );
         })}
       </nav>
-      <Input
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder={searchLabel}
-        aria-label={searchLabel}
-        className="mb-2 w-full max-w-64 shrink-0 bg-card"
-      />
       </div>
       {children}
       </StaffSearchContext.Provider>

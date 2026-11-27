@@ -114,9 +114,12 @@ export interface AttendanceEntry {
 
 export interface TestResult {
   admissionId: string;
-  marks: number;
+  absent: boolean;
+  marks: number | null;
   remarks: string;
 }
+
+export type TestStatus = "scheduled" | "cancelled";
 
 export interface BatchTest {
   id: string;
@@ -125,6 +128,8 @@ export interface BatchTest {
   conductedOn: string;
   staffId: string;
   maxMarks: number;
+  status: TestStatus;
+  remarks: string;
   results: TestResult[];
 }
 

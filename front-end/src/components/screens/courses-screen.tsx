@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { DataTable, type AppColumn } from "@/components/data-table";
-import { PageHeader } from "@/components/page-header";
+import { HeaderSearch, PageHeader } from "@/components/page-header";
 import { AccessDenied } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { formatInr } from "@/lib/format";
@@ -27,6 +27,7 @@ export function CoursesScreen() {
   const router = useRouter();
   const level = data.user ? accessLevel(data.user.role, "courses", data.permissions) : "none";
   const manage = data.user ? canManageCourses(data.user.role, data.permissions) : false;
+  const [query, setQuery] = useState("");
 
   const rows = useMemo<CourseRow[]>(
     () =>
@@ -71,19 +72,27 @@ export function CoursesScreen() {
       <PageHeader
         eyebrow="Catalogue"
         title="Courses"
-        description="Duration, fee, payment plans and syllabus live on the course. Each batch keeps its own schedule, and students hang off a batch."
+        description="Duration, fee, payment plans and syllabus live on the course. Batches, classes, and tests are on their own pages."
         actions={
-          manage ? (
-            <Button asChild>
-              <Link href="/courses/new">New course</Link>
-            </Button>
-          ) : null
+          <HeaderSearch
+            action={
+              manage ? (
+                <Button asChild>
+                  <Link href="/courses/new">New course</Link>
+                </Button>
+              ) : null
+            }
+            value={query}
+            onChange={setQuery}
+            placeholder="Search courses"
+          />
         }
       />
       <DataTable
         data={rows}
         columns={columns}
-        searchPlaceholder="Search courses"
+        hideSearch
+        filter={query}
         onRowClick={(row) => router.push(`/courses/${row.id}`)}
       />
     </div>

@@ -37,9 +37,22 @@ export function attendanceTally(entries: StaffAttendance[]) {
   return { present, late, absent, marked, rate };
 }
 
-export function testStanding(conductedOn: string, now = new Date()) {
-  const days = daysUntil(conductedOn, now);
-  return days !== null && days > 0 ? "Upcoming" : "Conducted";
+export function testStanding(
+  test: { conductedOn: string; status: "scheduled" | "cancelled" },
+  now = new Date(),
+) {
+  if (test.status === "cancelled") return "Cancelled" as const;
+  const days = daysUntil(test.conductedOn, now);
+  return days !== null && days > 0 ? ("Upcoming" as const) : ("Conducted" as const);
+}
+
+export function testMarkLabel(
+  result: { absent: boolean; marks: number | null } | null | undefined,
+  maxMarks: number,
+) {
+  if (!result || result.marks === null) return result?.absent ? "Absent" : "—";
+  if (result.absent) return "Absent";
+  return `${result.marks}/${maxMarks}`;
 }
 
 export type InstalmentTiming = "paid" | "overdue" | "due-soon" | "scheduled";

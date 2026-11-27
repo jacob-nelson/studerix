@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { AdmissionStatusActions } from "@/components/admission-status";
 import { DataTable, type AppColumn } from "@/components/data-table";
-import { PageHeader } from "@/components/page-header";
+import { HeaderSearch, PageHeader } from "@/components/page-header";
 import { AccessDenied } from "@/components/states";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,7 @@ export function AdmissionsScreen() {
   const level = data.user ? accessLevel(data.user.role, "admissions", data.permissions) : "none";
   const manage = data.user ? canManageAdmissions(data.user.role, data.permissions) : false;
   const fees = data.user ? canRecordFees(data.user.role, data.permissions) : false;
+  const [query, setQuery] = useState("");
 
   const rows = useMemo<FeeRow[]>(
     () =>
@@ -130,17 +131,25 @@ export function AdmissionsScreen() {
         title="Fees and collections"
         description="Admit a student onto one or more batches. Contacts, attendance and fees each have their own page."
         actions={
-          manage ? (
-            <Button asChild>
-              <Link href="/admissions/new">New admission</Link>
-            </Button>
-          ) : null
+          <HeaderSearch
+            action={
+              manage ? (
+                <Button asChild>
+                  <Link href="/admissions/new">New admission</Link>
+                </Button>
+              ) : null
+            }
+            value={query}
+            onChange={setQuery}
+            placeholder="Search students, batches or courses"
+          />
         }
       />
       <DataTable
         data={rows}
         columns={columns}
-        searchPlaceholder="Search students, batches or courses"
+        hideSearch
+        filter={query}
         initialSorting={[{ id: "joinedOn", desc: true }]}
         onRowClick={(row) => router.push(`/admissions/${row.id}`)}
       />

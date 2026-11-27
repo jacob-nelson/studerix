@@ -1055,9 +1055,11 @@ export function createSeed(): AcademyData {
         conductedOn: "2026-11-18",
         staffId: "STF-0008",
         maxMarks: 20,
+        status: "scheduled",
+        remarks: "",
         results: [
-          { admissionId: "ADM-2001", marks: 16, remarks: "Clear on test design" },
-          { admissionId: "ADM-2003", marks: 11, remarks: "Needs more practice on boundary cases" },
+          { admissionId: "ADM-2001", absent: false, marks: 16, remarks: "Clear on test design" },
+          { admissionId: "ADM-2003", absent: false, marks: 11, remarks: "Needs more practice on boundary cases" },
         ],
       },
       {
@@ -1067,9 +1069,11 @@ export function createSeed(): AcademyData {
         conductedOn: "2026-10-16",
         staffId: "STF-0007",
         maxMarks: 50,
+        status: "scheduled",
+        remarks: "",
         results: [
-          { admissionId: "ADM-2002", marks: 38, remarks: "Strong on automation" },
-          { admissionId: "ADM-2005", marks: 29, remarks: "Revise API testing" },
+          { admissionId: "ADM-2002", absent: false, marks: 38, remarks: "Strong on automation" },
+          { admissionId: "ADM-2005", absent: false, marks: 29, remarks: "Revise API testing" },
         ],
       },
       {
@@ -1079,6 +1083,8 @@ export function createSeed(): AcademyData {
         conductedOn: "2026-12-04",
         staffId: "STF-0008",
         maxMarks: 20,
+        status: "scheduled",
+        remarks: "",
         results: [],
       },
     ] satisfies BatchTest[],

@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { DataTable, type AppColumn } from "@/components/data-table";
-import { PageHeader } from "@/components/page-header";
+import { HeaderSearch, PageHeader } from "@/components/page-header";
 import { AccessDenied } from "@/components/states";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ export function ConsultancyScreen() {
   const data = useAcademy();
   const router = useRouter();
   const level = data.user ? accessLevel(data.user.role, "consultancy", data.permissions) : "none";
+  const [query, setQuery] = useState("");
   const rows = useMemo<ConsultancyRow[]>(
     () =>
       data.consultancy.map((candidate) => ({
@@ -96,17 +97,25 @@ export function ConsultancyScreen() {
         title="Consultancy placements"
         description="External candidates are added here directly. They do not need a course admission."
         actions={
-          level === "write" ? (
-            <Button asChild>
-              <Link href="/consultancy/new">New candidate</Link>
-            </Button>
-          ) : null
+          <HeaderSearch
+            action={
+              level === "write" ? (
+                <Button asChild>
+                  <Link href="/consultancy/new">New candidate</Link>
+                </Button>
+              ) : null
+            }
+            value={query}
+            onChange={setQuery}
+            placeholder="Search candidates or companies"
+          />
         }
       />
       <DataTable
         data={rows}
         columns={columns}
-        searchPlaceholder="Search candidates or companies"
+        hideSearch
+        filter={query}
         initialSorting={[{ id: "addedOn", desc: true }]}
         onRowClick={(row) => router.push(`/consultancy/${row.id}`)}
       />

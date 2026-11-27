@@ -75,7 +75,7 @@ export function StaffAttendanceScreen({ id }: { id: string }) {
 
   const tally = attendanceTally(person.attendance);
   const tests = data.tests.filter(
-    (test) => test.staffId === person.id && test.conductedOn <= isoDate(new Date()),
+    (test) => test.status !== "cancelled" && test.staffId === person.id && test.conductedOn <= isoDate(new Date()),
   ).length;
   const leave = person.attendance
     .filter((entry) => entry.status === "Absent")

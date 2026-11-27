@@ -1,5 +1,32 @@
 import type { ReactNode } from "react";
 
+import { Input } from "@/components/ui/input";
+
+export function HeaderSearch({
+  action,
+  value,
+  onChange,
+  placeholder,
+}: {
+  action?: ReactNode;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <div className="grid w-full justify-items-end gap-2 sm:w-80">
+      {action}
+      <Input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        className="w-full bg-card"
+      />
+    </div>
+  );
+}
+
 export function PageHeader({
   eyebrow,
   title,

@@ -185,7 +185,7 @@ export function CourseBatches({ id }: { id: string }) {
         <CardHeader>
           <CardTitle>Batches</CardTitle>
           <CardDescription>
-            Open a batch to manage its classes, staff, students, and tests.
+            Open a batch for its staff and students. Classes and tests for this course are on their own pages.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-6">
@@ -673,7 +673,7 @@ function ScheduleForm({ batchId }: { batchId: string }) {
   );
 }
 
-function BatchForm({ courseId, durationWeeks }: { courseId: string; durationWeeks: number }) {
+export function BatchForm({ courseId, durationWeeks }: { courseId: string; durationWeeks: number }) {
   const data = useAcademy();
   const start = isoDate(new Date());
   const form = useForm<BatchInput>({

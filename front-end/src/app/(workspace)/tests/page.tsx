@@ -1,9 +1,5 @@
-import type { Metadata } from "next";
-
-import { TestsScreen } from "@/components/screens/tests-screen";
-
-export const metadata: Metadata = { title: "Tests" };
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <TestsScreen />;
+  redirect("/courses/tests");
 }

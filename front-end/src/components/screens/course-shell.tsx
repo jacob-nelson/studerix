@@ -17,7 +17,9 @@ export function CourseShell({ id, children }: { id: string; children: ReactNode 
   const course = data.courses.find((item) => item.id === id);
   const level = data.user ? accessLevel(data.user.role, "courses", data.permissions) : "none";
   const base = `/courses/${id}`;
-  const batches = data.batches.filter((batch) => batch.courseId === id).length;
+  const courseBatches = data.batches.filter((batch) => batch.courseId === id);
+  const classes = courseBatches.reduce((sum, batch) => sum + batch.schedule.length, 0);
+  const tests = data.tests.filter((test) => courseBatches.some((batch) => batch.id === test.batchId)).length;
 
   if (level === "none") return <AccessDenied />;
   if (!course || !data.user) return <MissingRecord href="/courses" label="Back to courses" />;
@@ -26,10 +28,12 @@ export function CourseShell({ id, children }: { id: string; children: ReactNode 
     { href: base, label: "Details" },
     { href: `${base}/fees`, label: "Fee plans", count: course.feePlans.length },
     { href: `${base}/syllabus`, label: "Syllabus", count: course.syllabus.length },
-    { href: `${base}/batches`, label: "Batches", count: batches },
+    { href: `${base}/batches`, label: "Batches", count: courseBatches.length },
+    { href: `${base}/classes`, label: "Classes", count: classes },
+    { href: `${base}/tests`, label: "Tests", count: tests },
   ];
 
-  const wide = /\/batches\/[^/]+/.test(pathname);
+  const wide = /\/batches\/[^/]+/.test(pathname) || pathname.endsWith("/classes") || pathname.endsWith("/tests");
 
   return (
     <div className={cn("mx-auto grid w-full gap-6", wide ? "max-w-6xl" : "max-w-3xl")}>

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 
 import { DataTable, type AppColumn } from "@/components/data-table";
 import { OptionSelect } from "@/components/forms/option-select";
-import { PageHeader } from "@/components/page-header";
+import { HeaderSearch, PageHeader } from "@/components/page-header";
 import { AccessDenied } from "@/components/states";
 import { formatDateTime } from "@/lib/format";
 import { accessLevel } from "@/lib/permissions";
@@ -15,6 +15,7 @@ export function AuditScreen() {
   const { audit, user, permissions } = useAcademy();
   const level = user ? accessLevel(user.role, "audit", permissions) : "none";
   const [module, setModule] = useState("all");
+  const [query, setQuery] = useState("");
   const modules = useMemo(
     () => ["all", ...Array.from(new Set(audit.map((event) => event.module)))],
     [audit],
@@ -45,23 +46,28 @@ export function AuditScreen() {
         eyebrow="Audit"
         title="Audit trail"
         description="Who changed what, including fee corrections. New entries from this session appear at the top."
+        actions={
+          <HeaderSearch value={query} onChange={setQuery} placeholder="Search the trail" />
+        }
       />
       <DataTable
         data={rows}
         columns={columns}
-        searchPlaceholder="Search the trail"
-        searchAlign="end"
+        hideSearch
+        filter={query}
         initialSorting={[{ id: "at", desc: true }]}
         toolbar={
-          <OptionSelect
-            className="w-56"
-            value={module}
-            onChange={setModule}
-            options={modules.map((item) => ({
-              value: item,
-              label: item === "all" ? "All modules" : item,
-            }))}
-          />
+          <div className="ml-auto">
+            <OptionSelect
+              className="w-56"
+              value={module}
+              onChange={setModule}
+              options={modules.map((item) => ({
+                value: item,
+                label: item === "all" ? "All modules" : item,
+              }))}
+            />
+          </div>
         }
       />
     </div>

@@ -1,10 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { DataTable, type AppColumn } from "@/components/data-table";
-import { PageHeader } from "@/components/page-header";
+import { HeaderSearch, PageHeader } from "@/components/page-header";
 import { AccessDenied } from "@/components/states";
 import { StatusBadge } from "@/components/status-badge";
 import { formatDate, formatPhone } from "@/lib/format";
@@ -28,6 +28,7 @@ export function PlacementsScreen() {
   const data = useAcademy();
   const router = useRouter();
   const level = data.user ? accessLevel(data.user.role, "placements", data.permissions) : "none";
+  const [query, setQuery] = useState("");
   const rows = useMemo<PlacementRow[]>(
     () =>
       data.placements.map((placement) => {
@@ -92,11 +93,19 @@ export function PlacementsScreen() {
         eyebrow="Placements"
         title="Internal placements"
         description="Students who joined a Software Testing course appear here on their own. Name, phone and email come from that record."
+        actions={
+          <HeaderSearch
+            value={query}
+            onChange={setQuery}
+            placeholder="Search students, companies or ranks"
+          />
+        }
       />
       <DataTable
         data={rows}
         columns={columns}
-        searchPlaceholder="Search students, companies or ranks"
+        hideSearch
+        filter={query}
         initialSorting={[{ id: "updatedOn", desc: true }]}
         onRowClick={(row) => router.push(`/placements/${row.id}`)}
       />
